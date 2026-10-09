@@ -1,0 +1,6 @@
+{
+  "name": "Calculadora Solar Pro",
+  "description": "Calculadora profesional e interactiva de paneles solares fotovoltaicos, dimensionamiento kWp, retorno de inversión y beneficios ambientales.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
