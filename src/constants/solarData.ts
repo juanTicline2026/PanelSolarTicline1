@@ -1,4 +1,5 @@
 import { CityLocation, CurrencyConfig } from '../types/solar';
+import { PANEL_CATALOG } from './quoteCatalog';
 
 export const CURRENCIES: Record<string, CurrencyConfig> = {
   USD: {
@@ -117,29 +118,16 @@ export const CITIES: CityLocation[] = [
   { id: 'ar-mdz', name: 'Mendoza', country: 'Argentina', countryFlag: '🇦🇷', lat: -32.8895, lon: -68.8458, hsp: 5.58, solarZone: 'Muy Alta' },
 ];
 
-export const PANEL_OPTIONS = [
-  {
-    wattage: 500,
-    label: '500W Monocristalino PERC',
-    description: 'Estándar confiable y balance costo-beneficio óptimo.',
-    efficiency: '21.2%',
-    areaPerPanel: 2.2, // m²
-  },
-  {
-    wattage: 550,
-    label: '550W Tier 1 N-Type TOPCon (Recomendado)',
-    description: 'Mayor eficiencia térmica y máxima generación por m².',
-    efficiency: '22.8%',
-    areaPerPanel: 2.4, // m²
-  },
-  {
-    wattage: 580,
-    label: '580W Bifacial Ultra Premium',
-    description: 'Captación por ambas caras, ideal para techos planos o suelo.',
-    efficiency: '23.4%',
-    areaPerPanel: 2.5, // m²
-  },
-];
+export const PANEL_OPTIONS = PANEL_CATALOG.map((p) => ({
+  wattage: p.wattage,
+  label: p.label,
+  brand: p.brand,
+  description:
+    p.technology === 'Bifacial'
+      ? 'Captación por ambas caras, mayor generación en techos planos o suelo.'
+      : 'Módulo monofacial, balance costo-beneficio para techos inclinados.',
+  efficiency: p.technology,
+}));
 
 export const SYSTEM_TYPES = [
   {

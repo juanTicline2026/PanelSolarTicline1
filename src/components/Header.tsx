@@ -8,7 +8,7 @@ interface HeaderProps {
   selectedCurrency: string;
   onSelectCurrency: (code: string) => void;
   onOpenQuoteModal: () => void;
-  activeViewMode: 'wizard' | 'studio';
+  activeViewMode: 'cotizador' | 'wizard' | 'studio';
   onToggleViewMode: (mode: 'wizard' | 'studio') => void;
 }
 

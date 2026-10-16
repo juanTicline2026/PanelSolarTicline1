@@ -1,0 +1,1939 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Flujograma y Catálogo de Fórmulas - Plataforma Solar</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    :root {
+      --bg: #0b1329;
+      --card-bg: #131f38;
+      --card-inner: #1c2b4d;
+      --border: #24365d;
+      --text: #f1f5f9;
+      --text-muted: #94a3b8;
+      --primary: #38bdf8;
+      --emerald: #10b981;
+      --accent: #f59e0b;
+      --pill-bg: rgba(16, 185, 129, 0.15);
+      --pill-border: rgba(16, 185, 129, 0.4);
+    }
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      margin: 0;
+      padding: 2rem 1.5rem;
+    }
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    h1 {
+      font-size: 2.1rem;
+      border-bottom: 2px solid var(--border);
+      padding-bottom: 0.85rem;
+      margin-bottom: 1rem;
+      color: var(--primary);
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    h2 {
+      font-size: 1.55rem;
+      margin-top: 2.75rem;
+      margin-bottom: 1rem;
+      color: var(--emerald);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    h3 {
+      font-size: 1.2rem;
+      color: #38bdf8;
+      margin-top: 0;
+      margin-bottom: 0.75rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    p.lead {
+      color: var(--text-muted);
+      font-size: 1.05rem;
+      margin-bottom: 2rem;
+    }
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 1.5rem;
+      margin: 1.5rem 0;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
+      overflow-x: auto;
+      transition: all 0.2s ease;
+    }
+    .card-highlight {
+      border-left: 4px solid var(--emerald);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 0.5rem;
+      font-size: 0.92rem;
+    }
+    th, td {
+      padding: 0.85rem 1rem;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+    th {
+      background: #0d172e;
+      color: var(--primary);
+      font-weight: 700;
+      text-transform: uppercase;
+      font-size: 0.76rem;
+      letter-spacing: 0.05em;
+    }
+    tr:hover {
+      background: rgba(255, 255, 255, 0.025);
+    }
+    .var-name {
+      font-weight: 700;
+      color: #ffffff;
+      display: block;
+      font-size: 0.95rem;
+      margin-bottom: 0.25rem;
+    }
+    .var-code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.78rem;
+      color: #38bdf8;
+      opacity: 0.9;
+      display: block;
+    }
+    .var-val {
+      display: inline-block;
+      font-family: ui-monospace, monospace;
+      font-weight: 700;
+      color: #34d399;
+      background: rgba(16, 185, 129, 0.12);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      padding: 0.2rem 0.5rem;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      white-space: nowrap;
+    }
+    .formula-container {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+    .excel-formula {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      background: #060b17;
+      color: #4ade80;
+      border: 1px solid rgba(74, 222, 128, 0.3);
+      padding: 0.3rem 0.55rem;
+      border-radius: 6px;
+      font-size: 0.84rem;
+      font-weight: 600;
+      word-break: break-all;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .excel-formula-tag {
+      font-size: 0.65rem;
+      background: #166534;
+      color: #bbf7d0;
+      padding: 0.1rem 0.35rem;
+      border-radius: 4px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      flex-shrink: 0;
+    }
+    .logic-formula {
+      font-size: 0.82rem;
+      color: #cbd5e1;
+      padding: 0.2rem 0.4rem;
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 4px;
+      border-left: 2px solid var(--accent);
+    }
+    .logic-formula b {
+      color: #fbbf24;
+    }
+    .badge {
+      display: inline-block;
+      padding: 0.2rem 0.55rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      background: rgba(56, 189, 248, 0.15);
+      color: var(--primary);
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      white-space: nowrap;
+    }
+    .mermaid {
+      display: flex;
+      justify-content: center;
+      background: #ffffff;
+      border-radius: 10px;
+      padding: 1.5rem;
+      overflow-x: auto;
+    }
+    .badge-card {
+      font-size: 0.75rem;
+      padding: 0.25rem 0.6rem;
+      background: var(--pill-bg);
+      border: 1px solid var(--pill-border);
+      color: var(--emerald);
+      border-radius: 6px;
+      font-weight: 600;
+    }
+
+    /* CARD Y COMPONENTES FÓRMULA OFICIAL ANDRÉS */
+    .andres-card {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(14, 165, 233, 0.08) 100%), var(--card-bg);
+      border: 1.5px solid rgba(16, 185, 129, 0.4);
+      border-radius: 16px;
+      padding: 1.75rem;
+      margin: 2rem 0;
+      box-shadow: 0 14px 35px -5px rgba(0, 0, 0, 0.5);
+    }
+    .andres-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      padding-bottom: 1rem;
+      margin-bottom: 1.25rem;
+    }
+    .andres-formula-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+      gap: 1.25rem;
+      margin-bottom: 1.5rem;
+    }
+    .formula-math-box {
+      background: #081124;
+      border: 1px solid #1e3358;
+      border-radius: 12px;
+      padding: 1.15rem;
+      position: relative;
+    }
+    .formula-math-box.highlight {
+      border-color: var(--emerald);
+      box-shadow: 0 0 18px rgba(16, 185, 129, 0.18);
+    }
+    .math-label {
+      font-size: 0.76rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--primary);
+      margin-bottom: 0.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .math-expression {
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 1rem;
+      color: #34d399;
+      font-weight: 700;
+      background: rgba(0, 0, 0, 0.35);
+      padding: 0.65rem 0.85rem;
+      border-radius: 8px;
+      margin-bottom: 0.5rem;
+      word-break: break-all;
+      border-left: 3px solid var(--emerald);
+    }
+    .math-desc {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      line-height: 1.45;
+    }
+    .interactive-simulator {
+      background: #09142e;
+      border: 1px solid #233b66;
+      border-radius: 12px;
+      padding: 1.25rem;
+      margin-top: 1rem;
+    }
+    .sim-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.25rem;
+    }
+    .sim-field label {
+      display: block;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      margin-bottom: 0.35rem;
+      font-weight: 600;
+    }
+    .sim-field input {
+      width: 100%;
+      box-sizing: border-box;
+      background: #040916;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: #fff;
+      padding: 0.55rem 0.75rem;
+      font-size: 0.95rem;
+      font-weight: 600;
+      outline: none;
+    }
+    .sim-field input:focus {
+      border-color: var(--primary);
+    }
+    .sim-results {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      background: #060d1f;
+      border-radius: 10px;
+      padding: 1rem;
+      border: 1px solid rgba(16, 185, 129, 0.25);
+    }
+    .sim-kpi-title {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+    .sim-kpi-val {
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: var(--emerald);
+      font-family: monospace;
+    }
+
+    /* BARRA DE BÚSQUEDA Y FILTROS */
+    .toolbar-container {
+      position: sticky;
+      top: 1rem;
+      z-index: 50;
+      background: rgba(19, 31, 56, 0.96);
+      backdrop-filter: blur(14px);
+      border: 1px solid #2f4370;
+      border-radius: 14px;
+      padding: 1.25rem 1.5rem;
+      margin: 2.5rem 0 1.5rem 0;
+      box-shadow: 0 12px 30px -5px rgba(0, 0, 0, 0.6);
+    }
+    .search-row {
+      display: flex;
+      gap: 1rem;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .search-input-box {
+      position: relative;
+      flex: 1 1 320px;
+    }
+    .search-input-box input {
+      width: 100%;
+      box-sizing: border-box;
+      background: #070d1e;
+      border: 1.5px solid var(--border);
+      color: #ffffff;
+      border-radius: 10px;
+      padding: 0.75rem 2.5rem 0.75rem 2.85rem;
+      font-size: 0.95rem;
+      outline: none;
+      transition: all 0.25s ease;
+    }
+    .search-input-box input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.25);
+      background: #09122a;
+    }
+    .search-icon {
+      position: absolute;
+      left: 1rem;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 1.15rem;
+      pointer-events: none;
+      opacity: 0.7;
+    }
+    .clear-search-btn {
+      position: absolute;
+      right: 0.85rem;
+      top: 50%;
+      transform: translateY(-50%);
+      background: rgba(255, 255, 255, 0.12);
+      border: none;
+      color: #f1f5f9;
+      border-radius: 50%;
+      width: 24px;
+      height: 24px;
+      cursor: pointer;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.8rem;
+      transition: all 0.2s ease;
+    }
+    .clear-search-btn:hover {
+      background: #ef4444;
+      color: #ffffff;
+    }
+    .filter-group {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+    .filter-title {
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      letter-spacing: 0.05em;
+      margin-right: 0.25rem;
+    }
+    .filter-pill {
+      background: #070d1e;
+      border: 1px solid var(--border);
+      color: #94a3b8;
+      border-radius: 9999px;
+      padding: 0.45rem 1rem;
+      font-size: 0.83rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      user-select: none;
+    }
+    .filter-pill:hover {
+      background: rgba(56, 189, 248, 0.12);
+      color: var(--primary);
+      border-color: rgba(56, 189, 248, 0.4);
+    }
+    .filter-pill.active {
+      background: var(--emerald);
+      color: #061124;
+      border-color: var(--emerald);
+      font-weight: 700;
+      box-shadow: 0 0 14px rgba(16, 185, 129, 0.4);
+    }
+    .status-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 0.85rem;
+      padding-top: 0.75rem;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      font-size: 0.84rem;
+      color: var(--text-muted);
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+    .status-badge {
+      color: var(--primary);
+      font-weight: 700;
+    }
+    .btn-reset-filters {
+      background: transparent;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: var(--text-muted);
+      padding: 0.25rem 0.65rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.78rem;
+      transition: all 0.2s ease;
+    }
+    .btn-reset-filters:hover {
+      color: #ffffff;
+      border-color: var(--primary);
+    }
+    .no-results-card {
+      display: none;
+      text-align: center;
+      padding: 3.5rem 1.5rem;
+      background: var(--card-bg);
+      border: 2px dashed #334b77;
+      border-radius: 14px;
+      margin: 2rem 0;
+      color: var(--text-muted);
+    }
+    .no-results-card h4 {
+      color: #f87171;
+      font-size: 1.25rem;
+      margin-top: 0;
+      margin-bottom: 0.5rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>⚡ Flujograma y Catálogo de Fórmulas de la Plataforma</h1>
+    <p class="lead">
+      Este documento especifica el flujo de cálculo y catálogo completo de fórmulas del motor solar (<code>cotizador2Engine.ts</code> / <code>Cotizador2.xlsx</code>). Contiene <strong>la fórmula exacta de Excel</strong> extraída directamente de cada celda del archivo original (tanto de la hoja <code>Cotizacion</code> como de <code>Bases de Datos</code> y <code>Modelo Financiero</code>) y su correspondencia con los <strong>nombres reales de las variables en la plataforma</strong>.
+    </p>
+
+    <h2>1. Flujograma del Proceso con Nombres Reales de la Plataforma</h2>
+    <div class="card">
+      <div class="mermaid">
+flowchart TD
+    classDef input fill:#e0f2fe,stroke:#0284c7,stroke-width:2px,color:#0369a1;
+    classDef formula fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#92400e;
+    classDef output fill:#dcfce7,stroke:#16a34a,stroke-width:2px,color:#15803d;
+
+    subgraph ModCliente ["1. DATOS DEL CLIENTE (Entradas)"]
+        IN_TRM["TRM del día"]:::input
+        IN_CONS["Consumo promedio (kWh/mes)"]:::input
+        IN_COSTO["Costo del kWh (COP)"]:::input
+        IN_CONTRIB["Contribución 20%"]:::input
+        IN_TRANS["Transformador (kVA)"]:::input
+        IN_AHORRO_DES["Ahorro deseado (1 = 100%)"]:::input
+    end
+
+    subgraph ModUbicacion ["2. SISTEMA Y UBICACIÓN (Entradas)"]
+        IN_AREA["Área disponible (m²)"]:::input
+        IN_PANEL_W["Capacidad del panel (W)"]:::input
+        IN_DEPTO["Departamento"]:::input
+        IN_RAD_TIPO["Radiación (Tipo: Promedio/Mínimo/Máximo)"]:::input
+        IN_TURNOS["Turnos de operación"]:::input
+    end
+
+    subgraph ModFactores ["3. FACTORES INICIALES"]
+        F_VALOR_KWH["Valor kWh factura<br/><b>Excel:</b> =IF(C9='Si',C8*1.2,C8)<br/><b>Lógica:</b> SI(Contribución 20% = 'Si'; Costo * 1.2; Costo)"]:::formula
+        F_RAD["Radiación (HSP)<br/><b>Excel:</b> =VLOOKUP(C15,'Bases de Datos'!G5:J38,col,0)<br/><b>Lógica:</b> BUSCARV(Departamento; Bases; Radiación)"]:::formula
+    end
+
+    subgraph ModReq ["4. SISTEMA REQUERIDO POR CONSUMO"]
+        F_POT_REQ["Potencia P requerida<br/><b>Excel:</b> =(C12*1000)/(C20*30)<br/><b>Lógica:</b> (Consumo * 1000) / (Radiación * 30)"]:::formula
+        F_PAN_REQ["Paneles<br/><b>Excel:</b> ='Bases de Datos'!C24 -> =EVEN(C23/C15)<br/><b>Lógica:</b> REDONDEAR.PAR(Potencia P requerida / Capacidad panel)"]:::formula
+        F_POT_PICO["Potencia pico ofrecida<br/><b>Excel:</b> =C24*605<br/><b>Lógica:</b> Paneles * 605"]:::formula
+        F_AREA_REQ["Área requerida<br/><b>Excel:</b> ='Bases de Datos'!C26 -> =EVEN(C24*2.8)<br/><b>Lógica:</b> REDONDEAR.PAR(Paneles * 2.8)"]:::formula
+        F_PROD_REQ["Producción mensual<br/><b>Excel:</b> ='Bases de Datos'!C27 -> =(C24*C15*C20*30)/1000<br/><b>Lógica:</b> (Paneles * Capacidad panel * Radiación * 30) / 1000"]:::formula
+        F_WP_REQ["Wp instalados<br/><b>Excel:</b> ='Bases de Datos'!C28 -> =C24*C15<br/><b>Lógica:</b> Paneles * Capacidad panel"]:::formula
+        F_KWP_REQ["kWp<br/><b>Excel:</b> =C28/1000<br/><b>Lógica:</b> Wp instalados / 1000"]:::formula
+        F_AHORRO_REQ["Ahorro (%)<br/><b>Excel Cotizacion!F16:</b> ='Bases de Datos'!C30<br/><b>Excel Bases!C30:</b> =(C29*C20*30)/C12"]:::formula
+    end
+
+    subgraph ModArea ["5. SISTEMA SEGÚN ÁREA DISPONIBLE"]
+        F_POT_AREA["Potencia en área kW<br/><b>Excel:</b> =((Cotizacion!C14*0.85)/2)*(Cotizacion!C17/1000)"]:::formula
+        F_PAN_AREA["Paneles por área<br/><b>Excel:</b> =EVEN((C13*1000)/C15)"]:::formula
+        F_AREA_REQ_A["Área requerida (área)<br/><b>Excel:</b> =EVEN(C14*2.8)"]:::formula
+        F_PROD_AREA["Producción mensual (área)<br/><b>Excel:</b> =(C14*C15*C20*30)/1000"]:::formula
+        F_WP_AREA["Wp instalados (área)<br/><b>Excel:</b> =C14*C15"]:::formula
+        F_KWP_AREA["kWp (área)<br/><b>Excel:</b> =C18/1000"]:::formula
+        F_AHORRO_AREA["Ahorro (área)<br/><b>Excel:</b> =(C19*C20*30)/C12"]:::formula
+    end
+
+    subgraph ModAmbiental ["6. GENERACIÓN E IMPACTO AMBIENTAL"]
+        F_GEN_CONS["Generación mensual a consumir<br/><b>Excel:</b> =C24*C15*C20*C37"]:::formula
+        F_GEN_INY["Generación mensual a inyectar<br/><b>Excel:</b> =C24*C15*C20*(30-C37)"]:::formula
+        F_GEN_TOT["Generación total<br/><b>Excel:</b> =C34+C35"]:::formula
+        F_CO2["Ahorro en CO₂ (ton/año)<br/><b>Excel:</b> =(((C36*12)/1000)/1000)*0.39"]:::formula
+        F_ARB["Árboles<br/><b>Excel:</b> =C38*2"]:::formula
+    end
+
+    subgraph ModCotiz ["7. COTIZACIÓN & FINANCIERO"]
+        F_COSTO_VATIO["Costo por vatio (COP)<br/><b>Excel:</b> =VLOOKUP(F6,'Bases de Datos'!L4:O36,2,TRUE)*C5"]:::formula
+        F_COSTO_SOL["Costo de la solución<br/><b>Excel:</b> =VLOOKUP(F6,'Bases de Datos'!L4:O36,2,TRUE)*F6*C5"]:::formula
+        F_AHORRO_MES["Ahorro mensual<br/><b>Excel:</b> =((Cotizacion!C10*Cotizacion!F14))"]:::formula
+        F_RETORNO["Retorno (Meses / Años)<br/><b>Excel:</b> =COUNTIF(B21:KP21,'<0')"]:::formula
+        F_TIR["TIR<br/><b>Excel:</b> =+IRR(B21:AA21)"]:::formula
+        F_AHORRO_30["Ahorro en 30 años<br/><b>Excel:</b> =+'Modelo Financiero Año'!AF21"]:::formula
+    end
+
+    subgraph ModAndres ["⚡ METODOLOGÍA OFICIAL ANDRÉS (NASA POWER LIVE)"]
+        F_ANDRES_CONS["E_consumoAnual<br/><b>Fórmula:</b> ConsumoMensual(Factura) * 12"]:::formula
+        F_ANDRES_IRR["Irradiancia (HSP)<br/><b>Fuente:</b> NASA POWER (kWh/m²/día)"]:::input
+        F_ANDRES_PAN["NroPaneles<br/><b>Fórmula:</b> E_consumoAnual / (PotPanel_kWp * 365 * Irradiancia * 80%)"]:::formula
+        F_ANDRES_GEN["E_genAnual<br/><b>Fórmula:</b> NroPaneles * PotPanel_kWp * 365 * Irradiancia * 80%"]:::output
+    end
+
+    subgraph SalidasFinales ["8. RESULTADOS CLAVE EN PLATAFORMA"]
+        OUT_SYS["Sistema Instalado<br/>(Paneles, kWp, Área requerida)"]:::output
+        OUT_ECO["Impacto Ambiental<br/>(CO₂ evitado, Árboles)"]:::output
+        OUT_INV["Inversión Llave en Mano<br/>(Costo de la solución, Costo por vatio)"]:::output
+        OUT_ROI["Retorno Económico<br/>(Ahorro mensual, Ahorro 30 años, Retorno, TIR)"]:::output
+    end
+
+    %% Conexiones
+    IN_COSTO & IN_CONTRIB --> F_VALOR_KWH
+    IN_DEPTO & IN_RAD_TIPO --> F_RAD
+
+    IN_CONS & F_RAD --> F_POT_REQ
+    F_POT_REQ & IN_PANEL_W --> F_PAN_REQ
+    F_PAN_REQ --> F_POT_PICO
+    F_PAN_REQ --> F_AREA_REQ
+    F_PAN_REQ & IN_PANEL_W --> F_WP_REQ --> F_KWP_REQ
+    F_PAN_REQ & IN_PANEL_W & F_RAD --> F_PROD_REQ
+    F_KWP_REQ & F_RAD & IN_CONS --> F_AHORRO_REQ
+
+    IN_AREA & IN_PANEL_W --> F_POT_AREA
+    F_POT_AREA & IN_PANEL_W --> F_PAN_AREA
+    F_PAN_AREA --> F_AREA_REQ_A
+    F_PAN_AREA & IN_PANEL_W & F_RAD --> F_PROD_AREA
+    F_PAN_AREA & IN_PANEL_W --> F_WP_AREA --> F_KWP_AREA
+    F_KWP_AREA & F_RAD & IN_CONS --> F_AHORRO_AREA
+
+    F_PAN_REQ & IN_PANEL_W & F_RAD & IN_TURNOS --> F_GEN_CONS
+    F_PAN_REQ & IN_PANEL_W & F_RAD & IN_TURNOS --> F_GEN_INY
+    F_GEN_CONS & F_GEN_INY --> F_GEN_TOT
+    F_GEN_TOT --> F_CO2 --> F_ARB
+
+    F_WP_REQ & IN_TRM --> F_COSTO_VATIO
+    F_COSTO_VATIO & F_WP_REQ --> F_COSTO_SOL
+    F_PROD_REQ & F_VALOR_KWH --> F_AHORRO_MES
+    F_COSTO_SOL & F_AHORRO_MES --> F_RETORNO
+    F_COSTO_SOL & F_AHORRO_MES --> F_TIR
+    F_AHORRO_MES --> F_AHORRO_30
+
+    %% Conexiones Metodología Andrés (NASA POWER)
+    IN_CONS --> F_ANDRES_CONS
+    F_ANDRES_CONS & IN_PANEL_W & F_ANDRES_IRR --> F_ANDRES_PAN
+    F_ANDRES_PAN & IN_PANEL_W & F_ANDRES_IRR --> F_ANDRES_GEN
+    F_ANDRES_PAN & F_ANDRES_GEN -.-> OUT_SYS
+
+    F_PAN_REQ & F_KWP_REQ & F_AREA_REQ --> OUT_SYS
+    F_CO2 & F_ARB --> OUT_ECO
+    F_COSTO_VATIO & F_COSTO_SOL --> OUT_INV
+    F_AHORRO_MES & F_AHORRO_30 & F_RETORNO & F_TIR --> OUT_ROI
+      </div>
+    </div>
+
+    <!-- TARJETA DESTACADA: FÓRMULA OFICIAL ANDRÉS (NASA POWER 100% INTEGRADA) -->
+    <div class="andres-card">
+      <div class="andres-header">
+        <div>
+          <h2 style="margin: 0; color: #34d399; font-size: 1.45rem;">
+            ⚡ Metodología Oficial Andrés: Dimensionamiento e Integración NASA POWER
+          </h2>
+          <p style="margin: 0.35rem 0 0 0; color: var(--text-muted); font-size: 0.88rem;">
+            Especificación matemática extraída de <code>formula andres.docx</code>, 100% implementada en el motor en vivo <code>solarCalculator.ts</code> y reflejada en el componente <strong>Reflejo en Vivo del Proyecto</strong>.
+          </p>
+        </div>
+        <span class="badge" style="background: rgba(16, 185, 129, 0.2); border-color: rgba(16, 185, 129, 0.6); color: #34d399; font-size: 0.85rem; padding: 0.35rem 0.75rem;">
+          ✓ 100% Integrada en Código y UI
+        </span>
+      </div>
+
+      <div class="andres-formula-grid">
+        <!-- 1. E_consumoAnual -->
+        <div class="formula-math-box">
+          <div class="math-label">
+            <span>1. Consumo Anual</span>
+            <span style="color: #38bdf8;">Base Factura</span>
+          </div>
+          <div class="math-expression">E_consumoAnual = ConsumoMensual(Factura) * 12</div>
+          <div class="math-desc">
+            Anualiza el consumo facturado del cliente para sincronizarlo con el ciclo astronómico y solar de 365 días del año.
+          </div>
+        </div>
+
+        <!-- 2. Irradiancia -->
+        <div class="formula-math-box">
+          <div class="math-label">
+            <span>2. Radiación Solar</span>
+            <span style="color: #f59e0b;">NASA POWER API</span>
+          </div>
+          <div class="math-expression">Irradiancia = NASA Horizontal (kWh/m²/day)</div>
+          <div class="math-desc">
+            Horas de Sol Pico (HSP) obtenidas satelitalmente por latitud y longitud desde la API de climatología solar de NASA Langley.
+          </div>
+        </div>
+
+        <!-- 3. NroPaneles -->
+        <div class="formula-math-box highlight">
+          <div class="math-label">
+            <span>3. Número de Paneles</span>
+            <span style="color: #34d399;">Fórmula Núcleo</span>
+          </div>
+          <div class="math-expression">NroPaneles = E_consumoAnual / (PotPanel(kWp) * 365 * Irradiancia * 0.80)</div>
+          <div class="math-desc">
+            Calcula la cantidad exacta requerida considerando el <strong>Performance Ratio (PR) del 80%</strong> y 365 días. En campo se redondea hacia arriba (<code>Math.ceil</code>) para garantizar el 100% de cobertura.
+          </div>
+        </div>
+
+        <!-- 4. E_genAnual -->
+        <div class="formula-math-box highlight">
+          <div class="math-label">
+            <span>4. Generación Anual</span>
+            <span style="color: #34d399;">Producción Real</span>
+          </div>
+          <div class="math-expression">E_genAnual = NroPaneles * PotPanel(kWp) * 365 * Irradiancia * 0.80</div>
+          <div class="math-desc">
+            Energía renovable neta generada anualmente en kWh por la potencia instalada (kWp) considerando el factor de rendimiento del 80%.
+          </div>
+        </div>
+      </div>
+
+      <!-- BANCO DE PRUEBAS / SIMULADOR EN VIVO DE LA FÓRMULA -->
+      <div class="interactive-simulator">
+        <h3 style="margin-top: 0; color: #38bdf8; font-size: 1.05rem; display: flex; align-items: center; justify-content: space-between;">
+          <span>🧮 Banco de Pruebas Interactivo: Simular Fórmula Andrés en Vivo</span>
+          <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: normal;">Modifica los campos y observa el cálculo instantáneo</span>
+        </h3>
+
+        <div class="sim-grid">
+          <div class="sim-field">
+            <label for="simConsumo">Consumo Mensual Factura (kWh/mes):</label>
+            <input type="number" id="simConsumo" value="400" min="1" step="10" />
+          </div>
+          <div class="sim-field">
+            <label for="simPotPanel">Potencia del Panel (W):</label>
+            <input type="number" id="simPotPanel" value="580" min="100" step="10" />
+          </div>
+          <div class="sim-field">
+            <label for="simIrrad">Irradiancia NASA (HSP kWh/m²/día):</label>
+            <input type="number" id="simIrrad" value="5.51" min="1" max="10" step="0.01" />
+          </div>
+          <div class="sim-field">
+            <label>Eficiencia / PR Sistema (Fijo):</label>
+            <input type="text" value="80% (0.80)" disabled style="opacity: 0.7; background: #0b152d;" />
+          </div>
+        </div>
+
+        <div class="sim-results">
+          <div>
+            <div class="sim-kpi-title">E_consumoAnual</div>
+            <div class="sim-kpi-val" id="resConsumoAnual">4.800 kWh</div>
+            <div style="font-size: 0.72rem; color: #94a3b8;">= Consumo × 12</div>
+          </div>
+          <div>
+            <div class="sim-kpi-title">Prod. Anual por Panel</div>
+            <div class="sim-kpi-val" id="resProdPorPanel" style="color: #38bdf8;">933,4 kWh</div>
+            <div style="font-size: 0.72rem; color: #94a3b8;">= kWp × 365 × HSP × 80%</div>
+          </div>
+          <div>
+            <div class="sim-kpi-title">NroPaneles (Exacto / Real)</div>
+            <div class="sim-kpi-val" id="resPaneles" style="color: #f59e0b;">5.14 → 6 pan.</div>
+            <div style="font-size: 0.72rem; color: #94a3b8;">Math.ceil(Exacto)</div>
+          </div>
+          <div>
+            <div class="sim-kpi-title">Potencia Instalada</div>
+            <div class="sim-kpi-val" id="resKwp" style="color: #34d399;">3.48 kWp</div>
+            <div style="font-size: 0.72rem; color: #94a3b8;">= 6 pan. × 580W</div>
+          </div>
+          <div>
+            <div class="sim-kpi-title">E_genAnual Generada</div>
+            <div class="sim-kpi-val" id="resGenAnual">5.600 kWh/año</div>
+            <div style="font-size: 0.72rem; color: #94a3b8;">467 kWh/mes prom.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h2>2. Catálogo de Fórmulas de Excel y Variables por Módulo</h2>
+
+    <!-- BARRA DE BÚSQUEDA Y FILTRO POR CELDA DE EXCEL -->
+    <div class="toolbar-container">
+      <div class="search-row">
+        <div class="search-input-box">
+          <span class="search-icon">🔍</span>
+          <input 
+            type="text" 
+            id="tableSearch" 
+            placeholder="Buscar por nombre, número, valor, celda (ej: C10, F16, andres, E_genAnual, 580, 5.51, TIR)..." 
+            autocomplete="off"
+          />
+          <button type="button" class="clear-search-btn" id="clearSearch" title="Borrar búsqueda">✕</button>
+        </div>
+
+        <div class="filter-group">
+          <span class="filter-title">Filtrar por Hoja de Excel:</span>
+          <button type="button" class="filter-pill active" data-filter="all">Todas las Hojas</button>
+          <button type="button" class="filter-pill" data-filter="andres">Fórmula Andrés / NASA</button>
+          <button type="button" class="filter-pill" data-filter="cotizacion">Cotización</button>
+          <button type="button" class="filter-pill" data-filter="bases">Bases de Datos</button>
+          <button type="button" class="filter-pill" data-filter="financiero">Modelo Financiero</button>
+        </div>
+      </div>
+
+      <div class="status-bar">
+        <span>Mostrando <span class="status-badge" id="matchCount">47</span> variables activas</span>
+        <button type="button" class="btn-reset-filters" id="resetFilters">Restablecer filtros</button>
+      </div>
+    </div>
+
+    <!-- TARJETA CUANDO NO HAY COINCIDENCIAS -->
+    <div class="no-results-card" id="noResultsCard">
+      <h4>Sin resultados encontrados</h4>
+      <p>No se encontró ninguna variable o fórmula que coincida con tu criterio de búsqueda o filtro seleccionado.</p>
+      <button type="button" class="filter-pill active" id="btnResetNoResults" style="margin-top: 0.5rem;">Ver todas las variables</button>
+    </div>
+
+    <!-- CARD 0: FÓRMULA OFICIAL ANDRÉS (NASA POWER) -->
+    <div class="card card-highlight card-table-section" style="border-left: 4px solid #34d399;">
+      <h3>
+        <span>⚡ FÓRMULA OFICIAL ANDRÉS: DIMENSIONAMIENTO NASA POWER EN VIVO</span>
+        <span class="badge-card" style="background: rgba(16, 185, 129, 0.2); color: #34d399; border-color: rgba(16, 185, 129, 0.5);">
+          Especificación formula andres.docx
+        </span>
+      </h3>
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 20%;">Nombre en Plataforma (Imagen)</th>
+            <th style="width: 14%;">Variable Código</th>
+            <th style="width: 13%;">Celda / Fuente</th>
+            <th style="width: 11%;">Valor Ejemplo</th>
+            <th style="width: 26%;">Fórmula de Excel y Lógica</th>
+            <th style="width: 16%;">Función en el Sistema</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr data-sheet="andres cotizacion">
+            <td>
+              <span class="var-name">E_consumoAnual</span>
+            </td>
+            <td><span class="var-code">res.annualConsumptionKwh</span></td>
+            <td><span class="badge" style="background: rgba(56, 189, 248, 0.2); border-color: #38bdf8; color: #38bdf8;">formula andres.docx</span></td>
+            <td><span class="var-val">4.800 kWh/año</span></td>
+            <td>
+              <div class="formula-container">
+                <div class="excel-formula"><span class="excel-formula-tag">Excel</span> =ConsumoMensual*12</div>
+                <div class="logic-formula"><b>Fórmula Andrés:</b> E_consumoAnual = ConsumoMensual(Factura) * 12</div>
+              </div>
+            </td>
+            <td>Consumo energético anual proyectado en kilovatios-hora a partir del valor promedio o factura mensual.</td>
+          </tr>
+
+          <tr data-sheet="andres bases">
+            <td>
+              <span class="var-name">Irradiancia (NASA)</span>
+            </td>
+            <td><span class="var-code">res.effectiveHspUsed</span></td>
+            <td><span class="badge" style="background: rgba(245, 158, 11, 0.2); border-color: #f59e0b; color: #f59e0b;">NASA POWER API</span></td>
+            <td><span class="var-val">5.51 HSP</span></td>
+            <td>
+              <div class="formula-container">
+                <div class="excel-formula"><span class="excel-formula-tag">API</span> NASA Langley GHI ANN</div>
+                <div class="logic-formula"><b>Fórmula Andrés:</b> Radiación Solar Horizontal en kWh/m²/day</div>
+              </div>
+            </td>
+            <td>Horas de Sol Pico (HSP) promedio diario obtenidas satelitalmente por coordenadas de latitud/longitud.</td>
+          </tr>
+
+          <tr data-sheet="andres cotizacion">
+            <td>
+              <span class="var-name">eficiencia(80%)</span>
+            </td>
+            <td><span class="var-code">QUOTE_PARAMS.systemEfficiency</span></td>
+            <td><span class="badge">Cotizacion!G9</span></td>
+            <td><span class="var-val">80% (0.80)</span></td>
+            <td>
+              <div class="formula-container">
+                <div class="excel-formula"><span class="excel-formula-tag">Excel</span> =0.80</div>
+                <div class="logic-formula"><b>PR Global:</b> Performance Ratio que descuenta pérdidas del 20%</div>
+              </div>
+            </td>
+            <td>Eficiencia global neta de la instalación solar (pérdidas por temperatura, cableado, suciedad e inversor).</td>
+          </tr>
+
+          <tr data-sheet="andres cotizacion">
+            <td>
+              <span class="var-name">365dias</span>
+            </td>
+            <td><span class="var-code">QUOTE_PARAMS.daysPerYear</span></td>
+            <td><span class="badge">Constante</span></td>
+            <td><span class="var-val">365 días</span></td>
+            <td>
+              <div class="formula-container">
+                <div class="excel-formula"><span class="excel-formula-tag">Excel</span> =365</div>
+                <div class="logic-formula"><b>Días de año:</b> Factor de anualización de la radiación diaria</div>
+              </div>
+            </td>
+            <td>Días solares del año astronómico usados para convertir la radiación diaria a generación anual.</td>
+          </tr>
+
+          <tr data-sheet="andres cotizacion">
+            <td>
+              <span class="var-name">PotPanel(kWp)</span>
+            </td>
+            <td><span class="var-code">inputs.panelWattage / 1000</span></td>
+            <td><span class="badge">Cotizacion!C15</span></td>
+            <td><span class="var-val">0.58 kWp (580W)</span></td>
+            <td>
+              <div class="formula-container">
+                <div class="excel-formula"><span class="excel-formula-tag">Excel</span> =C15/1000</div>
+                <div class="logic-formula"><b>Conversión:</b> Potencia del panel en vatios dividida entre 1000</div>
+              </div>
+            </td>
+            <td>Potencia nominal unitaria en kilovatios pico (kWp) del panel solar seleccionado en el catálogo.</td>
+          </tr>
+
+          <tr data-sheet="andres cotizacion bases">
+            <td>
+              <span class="var-name">Módulos Solares (NroPaneles)</span>
+            </td>
+            <td><span class="var-code">res.panelCount (exact: exactPanelCount)</span></td>
+            <td><span class="badge" style="background: rgba(16, 185, 129, 0.2); border-color: #34d399; color: #34d399;">formula andres.docx</span></td>
+            <td><span class="var-val">6 paneles (5.14)</span></td>
+            <td>
+              <div class="formula-container">
+                <div class="excel-formula"><span class="excel-formula-tag">Excel</span> =CEILING(E_consumoAnual / (PotPanel*365*Irrad*0.8), 1)</div>
+                <div class="logic-formula"><b>Fórmula Andrés:</b> NroPaneles = E_consumoAnual / (PotPanel(kWp) * 365dias * irradiancia * eficiencia(80%))</div>
+              </div>
+            </td>
+            <td>Número exacto y redondeado al entero superior de módulos solares necesarios para cubrir el consumo anual.</td>
+          </tr>
+
+          <tr data-sheet="andres cotizacion">
+            <td>
+              <span class="var-name">Potencia Recomendada</span>
+            </td>
+            <td><span class="var-code">res.actualInstalledKwp</span></td>
+            <td><span class="badge">Cotizacion!C5</span></td>
+            <td><span class="var-val">3.48 kWp</span></td>
+            <td>
+              <div class="formula-container">
+                <div class="excel-formula"><span class="excel-formula-tag">Excel</span> =C6*0.58</div>
+                <div class="logic-formula"><b>Potencia Pico:</b> 6 paneles × 0.58 kWp = 3.48 kWp</div>
+              </div>
+            </td>
+            <td>Capacidad total en potencia pico de corriente directa (DC) del generador fotovoltaico instalado.</td>
+          </tr>
+
+          <tr data-sheet="andres cotizacion bases">
+            <td>
+              <span class="var-name">E_genAnual</span>
+            </td>
+            <td><span class="var-code">res.annualGenerationKwh</span></td>
+            <td><span class="badge" style="background: rgba(16, 185, 129, 0.2); border-color: #34d399; color: #34d399;">formula andres.docx</span></td>
+            <td><span class="var-val">5.600 kWh/año</span></td>
+            <td>
+              <div class="formula-container">
+                <div class="excel-formula"><span class="excel-formula-tag">Excel</span> =NroPaneles*PotPanel*365*Irradiancia*0.8</div>
+                <div class="logic-formula"><b>Fórmula Andrés:</b> E_genAnual = NroPaneles * PotPanel(kWp) * 365dias * irradiancia * eficiencia(80%)</div>
+              </div>
+            </td>
+            <td>Generación energética anual neta garantizada que produce el sistema fotovoltaico (equivale a 467 kWh/mes promedio).</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- CARD 1 -->
+    <div class="card card-highlight card-table-section">
+      <h3>
+        <span>1. DATOS DEL CLIENTE</span>
+        <span class="badge-card">Módulo de Entrada</span>
+      </h3>
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 20%;">Nombre en Plataforma (Imagen)</th>
+            <th style="width: 14%;">Variable Código</th>
+            <th style="width: 13%;">Celda Excel</th>
+            <th style="width: 11%;">Valor Ejemplo</th>
+            <th style="width: 26%;">Fórmula de Excel y Lógica</th>
+            <th style="width: 16%;">Función en el Sistema</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr data-sheet="cotizacion">
+            <td>
+              <span class="var-name">TRM del día</span>
+            </td>
+            <td><span class="var-code">inp.trm</span></td>
+            <td><span class="badge">Cotizacion!C5</span></td>
+            <td><span class="var-val">3.900</span></td>
+            <td>
+              <div class="formula-container">
+                <div class="excel-formula"><span class="excel-formula-tag">Excel</span> Valor directo: 3900</div>
+                <div class="logic-formula"><b>Uso en Cotizacion!F19:</b> =VLOOKUP(...) * F6 * C5</div>
+              </div>
+            </td>
+            <td>Tasa Representativa del Mercado oficial para convertir la inversión de USD a pesos colombianos.</td>
+          </tr>
+          <tr data-sheet="cotizacion bases">
+            <td>
+              <span class="var-name">Consumo promedio (kWh/mes)</span>
+            </td>
+            <td><span class="var-code">inp.consumoKwh</span></td>
+            <td><span class="badge">Cotizacion!C7</span></td>
+            <td><span class="var-val">400</span></td>
+            <td>
+              <div class="formula-container">
+                <div class="excel-formula"><span class="excel-formula-tag">Excel</span> Valor directo: 400</div>
+                <div class="logic-formula"><b>Enlazado en Bases!C12:</b> =Cotizacion!C7</div>
+              </div>
+            </td>
+            <td>Consumo mensual en kWh reportado en la factura; determina la potencia requerida en Vatios pico.</td>
+          </tr>
+          <tr data-sheet="cotizacion">
+            <td>
+              <span class="var-name">Costo del kWh (COP)</span>
+            </td>
+            <td><span class="var-code">inp.costoKwhBase</span></td>
+            <td><span class="badge">Cotizacion!C8</span></td>
+            <td><span class="var-val">790,49</span></td>
+            <td>
+              <div class="formula-container">
+                <div class="excel-formula"><span class="excel-formula-tag">Excel</span> Valor directo: 790.49</div>
+                <div class="logic-formula"><b>Uso en Cotizacion!C10:</b> =IF(C9="Si", C8*1.2, C8)</div>
+              </div>
+            </td>
+            <td>Costo base unitario por kWh antes de sobretasa; base del cálculo del ahorro económico mensual.</td>
+          </tr>
+          <tr data-sheet="cotizacion">
+            <td>
+              <span class="var-name">Contribución 20%</span>
+            </td>
+            <td><span class="var-code">inp.contribucion20</span></td>
+            <td><span class="badge">Cotizacion!C9</span></td>
+            <td><span class="var-val">Si</span></td>
+            <td>
+              <div class="formula-container">
+                <div class="excel-formula"><span class="excel-formula-tag">Excel</span> "Si" | "No"</div>
+                <div class="logic-formula"><b>Uso en Cotizacion!C10:</b> Aplica sobretasa del 20% (* 1.2)</div>
+              </div>
+            </td>
+            <td>Aplica sobretasa legal del 20% (comercial, industrial, estratos 5 y 6) aumentando el ahorro solar.</td>
+          </tr>
+          <tr data-sheet="cotizacion bases">
+            <td>
+              <span class="var-name">Transformador (kVA)</span>
+            </td>
+            <td><span class="var-code">inp.transformador</span></td>
+            <td><span class="badge">Cotizacion!C11</span></td>
+            <td><span class="var-val">75</span></td>
+            <td>
+              <div class="formula-container">
+                <div class="excel-formula"><span class="excel-formula-tag">Excel</span> Valor directo: 75</div>
+                <div class="logic-formula"><b>Enlazado en Bases!C31:</b> =Cotizacion!C11</div>
+              </div>
+            </td>
+            <td>Capacidad del transformador de conexión existente (límite técnico para inyección según norma CREG 174).</td>
+          </tr>
+          <tr data-sheet="cotizacion bases">
+            <td>
+              <span class="var-name">Ahorro deseado (1 = 100%)</span>
+            </td>
+            <td><span class="var-code">inp.ahorroDeseado</span></td>
+            <td><span class="badge">Cotizacion!C12</span></td>
+            <td><span class="var-val">1</span></td>
+            <td>
+              <div class="formula-container">
+                <div class="excel-formula"><span class="excel-formula-tag">Excel</span> Valor directo: 1 (100%)</div>
+                <div class="logic-formula"><b>Enlazado en Bases!C32:</b> =Cotizacion!C12</div>
+              </div>
+            </td>
+            <td>Meta porcentual de ahorro solar fijada por el cliente (por defecto 1 = 100% de cobertura).</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- CARD 2 -->
+    <div class="card card-highlight card-table-section">
+      <h3>
+        <span>2. SISTEMA Y UBICACIÓN</span>
+        <span class="badge-card">Módulo de Entrada</span>
+      </h3>
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 20%;">Nombre en Plataforma (Imagen)</th>
+            <th style="width: 14%;">Variable Código</th>
+            <th style="width: 13%;">Celda Excel</th>
+            <th style="width: 11%;">Valor Ejemplo</th>
+            <th style="width: 26%;">Fórmula de Excel y Lógica</th>
+            <th style="width: 16%;">Función en el Sistema</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr data-sheet="cotizacion bases">
+            <td>
+              <span class="var-name">Área disponible (m²)</span>
+            </td>
+            <td><span class="var-code">inp.areaDisponible</span></td>
+            <td><span class="badge">Cotizacion!C14</span></td>
+            <td><span class="var-val">54</span></td>
+            <td>
+              <div class="formula-container">
+                <div class="excel-formula"><span class="excel-formula-tag">Excel</span> Valor directo: 54</div>
+                <div class="logic-formula"><b>Uso en Bases!C13:</b> =((Cotizacion!C14*0.85)/2)*(C17/1000)</div>
+              </div>
+            </td>
+            <td>Superficie total disponible en m² para la instalación de paneles en cubierta.</td>
+          </tr>
+          <tr data-sheet="cotizacion bases">
+            <td>
+              <span class="var-name">Capacidad del panel (W)</span>
+            </td>
+            <td><span class="var-code">inp.potenciaPanel</span></td>
+            <td><span class="badge">Cotizacion!C17</span></td>
+            <td><span class="var-val">620 W</span></td>
+            <td>
+              <div class="formula-container">
+                <div class="excel-formula"><span class="excel-formula-tag">Excel</span> Valor directo: 620</div>
+                <div class="logic-formula"><b>Enlazado en Bases!C15:</b> =+Cotizacion!C17</div>
+              </div>
+            </td>
+            <td>Potencia nominal unitaria del panel fotovoltaico seleccionado del catálogo.</td>
+          </tr>
+          <tr data-sheet="cotizacion bases">
+            <td>
+              <span class="var-name">Departamento</span>
+            </td>
+            <td><span class="var-code">inp.departamento</span></td>
+            <td><span class="badge">Cotizacion!C15</span></td>
+            <td><span class="var-val">Antioquia</span></td>
+            <td>
+              <div class="formula-container">
+                <div class="excel-formula"><span class="excel-formula-tag">Excel</span> "Antioquia" (texto)</div>
+                <div class="logic-formula"><b>Clave en Cotizacion!F12:</b> =VLOOKUP(C15, Bases!G5:J38, ...)</div>
+              </div>
+            </td>
+            <td>Ubicación geográfica del proyecto para consultar la base de datos de radiación solar IDEAM.</td>
+          </tr>
+          <tr data-sheet="cotizacion bases">
+            <td>
+              <span class="var-name">Radiación</span>
+            </td>
+            <td><span class="var-code">inp.radiacionTipo</span></td>
+            <td><span class="badge">Cotizacion!C16</span></td>
+            <td><span class="var-val">Minimo</span></td>
+            <td>
+              <div class="formula-container">
+                <div class="excel-formula"><span class="excel-formula-tag">Excel</span> "Minimo" (texto)</div>
+                <div class="logic-formula"><b>Condición en Cotizacion!F12:</b> IF(C16="Minimo", col 3, ...)</div>
+              </div>
+            </td>
+            <td>Criterio de radiación: "Minimo" dimensiona para garantizar cobertura en los meses más nublados.</td>
+          </tr>
+          <tr data-sheet="bases">
+            <td>
+              <span class="var-name">Turnos de operación</span>
+            </td>
+            <td><span class="var-code">inp.turnosOperacion</span></td>
+            <td><span class="badge">Bases de Datos!C37</span></td>
+            <td><span class="var-val">2</span></td>
+            <td>
+              <div class="formula-container">
+                <div class="excel-formula"><span class="excel-formula-tag">Excel</span> Valor directo: 2</div>
+                <div class="logic-formula"><b>Uso en Bases!C34:</b> =C24*C15*C20*C37</div>
+              </div>
+            </td>
+            <td>Turnos laborales que determinan el porcentaje de autoconsumo directo vs inyección a red.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- CARD 3 -->
+    <div class="card card-highlight card-table-section">
+      <h3>
+        <span>3. MODELO FINANCIERO</span>
+        <span class="badge-card">Módulo de Entrada y Parámetros</span>
+      </h3>
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 20%;">Nombre en Plataforma (Imagen)</th>
+            <th style="width: 14%;">Variable Código</th>
+            <th style="width: 13%;">Celda Excel</th>
+            <th style="width: 11%;">Valor Ejemplo</th>
+            <th style="width: 26%;">Fórmula de Excel y Lógica</th>
+            <th style="width: 16%;">Función en el Sistema</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr data-sheet="financiero">
+            <td>
+              <span class="var-name">Beneficio tributario</span>
+            </td>
+            <td><span class="var-code">inp.beneficioTributario</span></td>
+            <td><span class="badge">Modelo Financiero Año!E1</span></td>
+            <td><span class="var-val">Si</span></td>
+            <td>
+              <div class="formula-container">
+                <div class="excel-formula"><span class="excel-formula-tag">Excel</span> "Si" | "No"</div>
+                <div class="logic-formula"><b>Uso en D16:D18:</b> =IF(E1="Si", B4*K2*K4, 0)</div>
+              </div>
+            </td>
+            <td>Aplica los incentivos: deducción del 50% de renta, depreciación acelerada en 5 años y exención de IVA.</td>
+          </tr>
+          <tr data-sheet="financiero">
+            <td>
+              <span class="var-name">Mantenimiento gratis (año 1)</span>
+            </td>
+            <td><span class="var-code">inp.mantenimientoGratis</span></td>
+            <td><span class="badge">Modelo Financiero Año!E3</span></td>
+            <td><span class="var-val">Si</span></td>
+            <td>
+              <div class="formula-container">
+                <div class="excel-formula"><span class="excel-formula-tag">Excel</span> "Si" | "No"</div>
+                <div class="logic-formula"><b>Uso en C15:</b> =IF(E3="si", 0, -B5)</div>
+              </div>
+            </td>
+            <td>Garantiza costo cero de operación y mantenimiento preventivo durante el primer año.</td>
+          </tr>
+          <tr data-sheet="financiero">
+            <td>
+              <span class="var-name">Financiación</span>
+            </td>
+            <td><span class="var-code">inp.financiacion</span></td>
+            <td><span class="badge">Modelo Financiero Año!E2</span></td>
+            <td><span class="var-val">No</span></td>
+            <td>
+              <div class="formula-container">
+                <div class="excel-formula"><span class="excel-formula-tag">Excel</span> "No" | "Si"</div>
+                <div class="logic-formula"><b>Uso en B2:</b> =IF(E2="si", B1-H1, B1)</div>
+              </div>
+            </td>
+            <td>Indica si el proyecto se compra de contado o financiado mediante crédito bancario a cuotas.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- CARD 4 -->
+    <div class="card card-highlight card-table-section">
+      <h3>
+        <span>4. SISTEMA SEGÚN ÁREA DISPONIBLE</span>
+        <span class="badge-card">Cálculos de Capacidad Máxima en Techo</span>
+      </h3>
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 20%;">Nombre en Plataforma (Imagen)</th>
+            <th style="width: 14%;">Variable Código</th>
+            <th style="width: 13%;">Celda Excel</th>
+            <th style="width: 11%;">Valor Ejemplo</th>
+            <th style="width: 26%;">Fórmula de Excel y Lógica</th>
+            <th style="width: 16%;">Función en el Sistema</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr data-sheet="cotizacion bases">
+            <td>
+              <span class="var-name">Valor kWh factura</span>
+            </td>
+            <td><span class="var-code">r.valorKwhFactura</span></td>
+            <td><span class="badge">Cotizacion!C10</span></td>
+            <td><span class="var-val">948,588</span></td>
+            <td>
+              <div class="formula-container">
+                <div class="excel-formula"><span class="excel-formula-tag">Excel</span> =IF(C9="Si",C8*1.2,C8)</div>
+                <div class="logic-formula"><b>SI</b>(Contribución 20% = "Si"; Costo * 1.2; Costo)</div>
+              </div>
+            </td>
+            <td>Tarifa real aplicada por kWh en la factura considerando la sobretasa del 20%.</td>
+          </tr>
+          <tr data-sheet="bases cotizacion">
+            <td>
+              <span class="var-name">Consumo kWh/mes</span>
+            </td>
+            <td><span class="var-code">inp.consumoKwh</span></td>
+            <td><span class="badge">Bases de Datos!C12</span></td>
+            <td><span class="var-val">400</span></td>
+            <td>
+              <div class="formula-container">
+                <div class="excel-formula"><span class="excel-formula-tag">Excel</span> =Cotizacion!C7</div>
+                <div class="logic-formula"><b>=</b> Consumo promedio (kWh/mes)</div>
+              </div>
+            </td>
+            <td>Consumo mensual base que se toma de referencia para comparar el tamaño del área.</td>
+          </tr>
+          <tr data-sheet="bases cotizacion">
+            <td>
+              <span class="var-name">Potencia en área kW</span>
+            </td>
+            <td><span class="var-code">r.potenciaEnAreaKw</span></td>
+            <td><span class="badge">Bases de Datos!C13</span></td>
+            <td><span class="var-val">14,23</span></td>
+            <td>
+              <div class="formula-container">
+                <div class="excel-formula"><span class="excel-formula-tag">Excel</span> =((Cotizacion!C14*0.85)/2)*(Cotizacion!C17/1000)</div>
+                <div class="logic-formula"><b>Fórmula:</b> ((Área * 0.85) / 2) * (Capacidad panel / 1000)</div>
+              </div>
+            </td>
+            <td>Potencia fotovoltaica máxima instalable en el techo considerando un 85% de área útil.</td>
+          </tr>
+          <tr data-sheet="bases">
+            <td>
+              <span class="var-name">Paneles por área</span>
+            </td>
+            <td><span class="var-code">r.porArea.paneles</span></td>
+            <td><span class="badge">Bases de Datos!C14</span></td>
+            <td><span class="var-val">24</span></td>
+            <td>
+              <div class="formula-container">
+                <div class="excel-formula"><span class="excel-formula-tag">Excel</span> =EVEN((C13*1000)/C15)</div>
+                <div class="logic-formula"><b>REDONDEAR.PAR</b>((Potencia área * 1000) / Capacidad panel)</div>
+              </div>
+            </td>
+            <td>Número de módulos solares que caben en el área (redondeado al par superior para strings simétricos).</td>
+          </tr>
+          <tr data-sheet="bases cotizacion">
+            <td>
+              <span class="var-name">Potencia panel</span>
+            </td>
+            <td><span class="var-code">inp.potenciaPanel</span></td>
+            <td><span class="badge">Bases de Datos!C15</span></td>
+            <td><span class="var-val">620 W</span></td>
+            <td>
+              <div class="formula-container">
+                <div class="excel-formula"><span class="excel-formula-tag">Excel</span> =+Cotizacion!C17</div>
+                <div class="logic-formula"><b>=</b> Capacidad del panel (W)</div>
+              </div>
+            </td>
+            <td>Potencia nominal individual de cada panel fotovoltaico utilizado en el cálculo.</td>
+          </tr>
+          <tr data-sheet="bases">
+            <td>
+              <span class="var-name">Área requerida</span>
+            </td>
+            <td><span class="var-code">r.porArea.areaRequerida</span></td>
+            <td><span class="badge">Bases de Datos!C16</span></td>
+            <td><span class="var-val">68 m²</span></td>
+            <td>
+              <div class="formula-container">
+                <div class="excel-formula"><span class="excel-formula-tag">Excel</span> =EVEN(C14*2.8)</div>
+                <div class="logic-formula"><b>REDONDEAR.PAR</b>(Paneles por área * 2.8)</div>
+              </div>
+            </td>
+            <td>Superficie de cubierta ocupada por los paneles calculados (a razón de 2.8 m²/panel con pasillos).</td>
+          </tr>
+          <tr data-sheet="bases">
+            <td>
+              <span class="var-name">Producción mensual</span>
+            </td>
+            <td><span class="var-code">r.porArea.produccionMensual</span></td>
+            <td><span class="badge">Bases de Datos!C17</span></td>
+            <td><span class="var-val">1.754 kWh</span></td>
+            <td>
+              <div class="formula-container">
+                <div class="excel-formula"><span class="excel-formula-tag">Excel</span> =(C14*C15*C20*30)/1000</div>
+                <div class="logic-formula"><b>Fórmula:</b> (Paneles * Potencia panel * Radiación * 30) / 1000</div>
+              </div>
+            </td>
+            <td>Energía mensual en kWh que generaría el sistema si se aprovechara todo el espacio disponible.</td>
+          </tr>
+          <tr data-sheet="bases">
+            <td>
+              <span class="var-name">Wp instalados</span>
+            </td>
+            <td><span class="var-code">r.porArea.wpInstalados</span></td>
+            <td><span class="badge">Bases de Datos!C18</span></td>
+            <td><span class="var-val">14.880</span></td>
+            <td>
+              <div class="formula-container">
+                <div class="excel-formula"><span class="excel-formula-tag">Excel</span> =C14*C15</div>
+                <div class="logic-formula"><b>Fórmula:</b> Paneles por área * Potencia panel</div>
+              </div>
+            </td>
+            <td>Potencia pico total instalada en Vatios según el área física disponible.</td>
+          </tr>
+          <tr data-sheet="bases">
+            <td>
+              <span class="var-name">kWp</span>
+            </td>
+            <td><span class="var-code">r.porArea.kwp</span></td>
+            <td><span class="badge">Bases de Datos!C19</span></td>
+            <td><span class="var-val">14,88</span></td>
+            <td>
+              <div class="formula-container">
+                <div class="excel-formula"><span class="excel-formula-tag">Excel</span> =C18/1000</div>
+                <div class="logic-formula"><b>Fórmula:</b> Wp instalados / 1000</div>
+              </div>
+            </td>
+            <td>Capacidad pico instalada según el área disponible expresada en kilovatios pico.</td>
+          </tr>
+          <tr data-sheet="cotizacion bases">
+            <td>
+              <span class="var-name">Radiación</span>
+            </td>
+            <td><span class="var-code">r.radiacion</span></td>
+            <td><span class="badge">Cotizacion!F12</span></td>
+            <td><span class="var-val">3,93</span></td>
+            <td>
+              <div class="formula-container">
+                <div class="excel-formula"><span class="excel-formula-tag">Excel</span> =IF(C16='Bases de Datos'!H5,VLOOKUP(C15,'Bases de Datos'!G5:J38,2,0),IF(C16='Bases de Datos'!I5,VLOOKUP(C15,'Bases de Datos'!G5:J38,3,0),IF(C16='Bases de Datos'!J5,VLOOKUP(C15,'Bases de Datos'!G5:J38,4,0))))</div>
+                <div class="logic-formula"><b>BUSCARV</b>(Departamento; Bases!G5:J38; ColumnaSegunTipo; 0)</div>
+              </div>
+            </td>
+            <td>Horas Sol Pico (HSP) promedio diarias del departamento y criterio seleccionados.</td>
+          </tr>
+          <tr data-sheet="bases">
+            <td>
+              <span class="var-name">Ahorro</span>
+            </td>
+            <td><span class="var-code">r.porArea.ahorro</span></td>
+            <td><span class="badge">Bases de Datos!C21</span></td>
+            <td><span class="var-val">438,59%</span></td>
+            <td>
+              <div class="formula-container">
+                <div class="excel-formula"><span class="excel-formula-tag">Excel</span> =(C19*C20*30)/C12</div>
+                <div class="logic-formula"><b>Fórmula:</b> (kWp * Radiación * 30) / Consumo kWh/mes</div>
+              </div>
+            </td>
+            <td>Porcentaje de cobertura energética que alcanzaría el sistema si se llena todo el techo.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- CARD 5 -->
+    <div class="card card-highlight card-table-section">
+      <h3>
+        <span>5. SISTEMA REQUERIDO POR CONSUMO</span>
+        <span class="badge-card">Dimensionamiento Óptimo Recomendado</span>
+      </h3>
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 20%;">Nombre en Plataforma (Imagen)</th>
+            <th style="width: 14%;">Variable Código</th>
+            <th style="width: 13%;">Celda Excel</th>
+            <th style="width: 11%;">Valor Ejemplo</th>
+            <th style="width: 26%;">Fórmula de Excel y Lógica</th>
+            <th style="width: 16%;">Función en el Sistema</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr data-sheet="bases">
+            <td>
+              <span class="var-name">Potencia P requerida</span>
+            </td>
+            <td><span class="var-code">r.requerido.potenciaRequeridaW</span></td>
+            <td><span class="badge">Bases de Datos!C23</span></td>
+            <td><span class="var-val">3.393</span></td>
+            <td>
+              <div class="formula-container">
+                <div class="excel-formula"><span class="excel-formula-tag">Excel</span> =(C12*1000)/(C20*30)</div>
+                <div class="logic-formula"><b>Fórmula:</b> (Consumo * 1000) / (Radiación * 30)</div>
+              </div>
+            </td>
+            <td>Potencia mínima teórica en Vatios requerida para suplir exactamente el consumo mensual.</td>
+          </tr>
+          <tr data-sheet="cotizacion bases">
+            <td>
+              <span class="var-name">Paneles</span>
+            </td>
+            <td><span class="var-code">r.requerido.paneles</span></td>
+            <td><span class="badge">Cotizacion!F8 &rarr; Bases!C24</span></td>
+            <td><span class="var-val">6</span></td>
+            <td>
+              <div class="formula-container">
+                <div class="excel-formula"><span class="excel-formula-tag">Excel Cotizacion!F8</span> ='Bases de Datos'!C24</div>
+                <div class="excel-formula"><span class="excel-formula-tag">Excel Bases!C24</span> =EVEN(C23/C15)</div>
+                <div class="logic-formula"><b>REDONDEAR.PAR</b>(Potencia P requerida / Capacidad panel)</div>
+              </div>
+            </td>
+            <td>Número exacto de paneles solares requeridos redondeados al par superior para equilibrar strings.</td>
+          </tr>
+          <tr data-sheet="bases">
+            <td>
+              <span class="var-name">Potencia pico ofrecida</span>
+            </td>
+            <td><span class="var-code">r.requerido.potenciaPicoOfrecida</span></td>
+            <td><span class="badge">Bases de Datos!C25</span></td>
+            <td><span class="var-val">3.630</span></td>
+            <td>
+              <div class="formula-container">
+                <div class="excel-formula"><span class="excel-formula-tag">Excel</span> =C24*605</div>
+                <div class="logic-formula"><b>Fórmula:</b> Paneles * 605</div>
+              </div>
+            </td>
+            <td>Potencia de referencia comercial estándar de módulos fotovoltaicos (605 W por módulo).</td>
+          </tr>
+          <tr data-sheet="cotizacion bases">
+            <td>
+              <span class="var-name">Área requerida</span>
+            </td>
+            <td><span class="var-code">r.requerido.areaRequerida</span></td>
+            <td><span class="badge">Cotizacion!F10 &rarr; Bases!C26</span></td>
+            <td><span class="var-val">18 m²</span></td>
+            <td>
+              <div class="formula-container">
+                <div class="excel-formula"><span class="excel-formula-tag">Excel Cotizacion!F10</span> ='Bases de Datos'!C26</div>
+                <div class="excel-formula"><span class="excel-formula-tag">Excel Bases!C26</span> =EVEN(C24*2.8)</div>
+                <div class="logic-formula"><b>REDONDEAR.PAR</b>(Paneles * 2.8)</div>
+              </div>
+            </td>
+            <td>Área mínima de cubierta indispensable para alojar la cantidad requerida de paneles.</td>
+          </tr>
+          <tr data-sheet="cotizacion bases">
+            <td>
+              <span class="var-name">Producción mensual</span>
+            </td>
+            <td><span class="var-code">r.requerido.produccionMensual</span></td>
+            <td><span class="badge">Cotizacion!F14 &rarr; Bases!C27</span></td>
+            <td><span class="var-val">439 kWh</span></td>
+            <td>
+              <div class="formula-container">
+                <div class="excel-formula"><span class="excel-formula-tag">Excel Cotizacion!F14</span> ='Bases de Datos'!C27</div>
+                <div class="excel-formula"><span class="excel-formula-tag">Excel Bases!C27</span> =(C24*C15*C20*30)/1000</div>
+                <div class="logic-formula"><b>Fórmula:</b> (Paneles * Capacidad panel * Radiación * 30) / 1000</div>
+              </div>
+            </td>
+            <td>Generación eléctrica proyectada mensual en kWh producida por los paneles requeridos.</td>
+          </tr>
+          <tr data-sheet="cotizacion bases">
+            <td>
+              <span class="var-name">Wp instalados</span>
+            </td>
+            <td><span class="var-code">r.requerido.wpInstalados</span></td>
+            <td><span class="badge">Cotizacion!F6 &rarr; Bases!C28</span></td>
+            <td><span class="var-val">3.720</span></td>
+            <td>
+              <div class="formula-container">
+                <div class="excel-formula"><span class="excel-formula-tag">Excel Cotizacion!F6</span> ='Bases de Datos'!C28</div>
+                <div class="excel-formula"><span class="excel-formula-tag">Excel Bases!C28</span> =C24*C15</div>
+                <div class="logic-formula"><b>Fórmula:</b> Paneles * Capacidad panel</div>
+              </div>
+            </td>
+            <td>Potencia total en Vatios pico que se cotizan e instalarán en la solución solar recomendada.</td>
+          </tr>
+          <tr data-sheet="bases">
+            <td>
+              <span class="var-name">kWp</span>
+            </td>
+            <td><span class="var-code">r.requerido.kwp</span></td>
+            <td><span class="badge">Bases de Datos!C29</span></td>
+            <td><span class="var-val">3,72</span></td>
+            <td>
+              <div class="formula-container">
+                <div class="excel-formula"><span class="excel-formula-tag">Excel</span> =C28/1000</div>
+                <div class="logic-formula"><b>Fórmula:</b> Wp instalados / 1000</div>
+              </div>
+            </td>
+            <td>Potencia nominal total instalada expresada en kilovatios pico.</td>
+          </tr>
+          <tr data-sheet="cotizacion bases">
+            <td>
+              <span class="var-name">Ahorro</span>
+            </td>
+            <td><span class="var-code">r.requerido.ahorro</span></td>
+            <td><span class="badge">Cotizacion!F16 &rarr; Bases!C30</span></td>
+            <td><span class="var-val">109,65%</span></td>
+            <td>
+              <div class="formula-container">
+                <div class="excel-formula"><span class="excel-formula-tag">Excel Cotizacion!F16</span> ='Bases de Datos'!C30</div>
+                <div class="excel-formula"><span class="excel-formula-tag">Excel Bases!C30</span> =(C29*C20*30)/C12</div>
+                <div class="logic-formula"><b>Fórmula:</b> (kWp * Radiación * 30) / Consumo promedio</div>
+              </div>
+            </td>
+            <td>Porcentaje real de cobertura energética obtenido frente al consumo original del usuario.</td>
+          </tr>
+          <tr data-sheet="bases cotizacion">
+            <td>
+              <span class="var-name">Transformador</span>
+            </td>
+            <td><span class="var-code">r.transformador</span></td>
+            <td><span class="badge">Bases de Datos!C31</span></td>
+            <td><span class="var-val">75</span></td>
+            <td>
+              <div class="formula-container">
+                <div class="excel-formula"><span class="excel-formula-tag">Excel</span> =Cotizacion!C11</div>
+                <div class="logic-formula"><b>=</b> Transformador (kVA)</div>
+              </div>
+            </td>
+            <td>Capacidad del transformador de conexión existente en kVA.</td>
+          </tr>
+          <tr data-sheet="bases cotizacion">
+            <td>
+              <span class="var-name">Ahorro deseado</span>
+            </td>
+            <td><span class="var-code">r.ahorroDeseado</span></td>
+            <td><span class="badge">Bases de Datos!C32</span></td>
+            <td><span class="var-val">100,00%</span></td>
+            <td>
+              <div class="formula-container">
+                <div class="excel-formula"><span class="excel-formula-tag">Excel</span> =Cotizacion!C12</div>
+                <div class="logic-formula"><b>=</b> Ahorro deseado (1 = 100%)</div>
+              </div>
+            </td>
+            <td>Porcentaje de ahorro fijado como meta inicial por el usuario.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- CARD 6 -->
+    <div class="card card-highlight card-table-section">
+      <h3>
+        <span>6. GENERACIÓN E IMPACTO AMBIENTAL</span>
+        <span class="badge-card">Balance Energético y Sostenibilidad</span>
+      </h3>
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 20%;">Nombre en Plataforma (Imagen)</th>
+            <th style="width: 14%;">Variable Código</th>
+            <th style="width: 13%;">Celda Excel</th>
+            <th style="width: 11%;">Valor Ejemplo</th>
+            <th style="width: 26%;">Fórmula de Excel y Lógica</th>
+            <th style="width: 16%;">Función en el Sistema</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr data-sheet="bases">
+            <td>
+              <span class="var-name">Generación mensual a consumir</span>
+            </td>
+            <td><span class="var-code">r.generacionMensualConsumir</span></td>
+            <td><span class="badge">Bases de Datos!C34</span></td>
+            <td><span class="var-val">29.239</span></td>
+            <td>
+              <div class="formula-container">
+                <div class="excel-formula"><span class="excel-formula-tag">Excel</span> =C24*C15*C20*C37</div>
+                <div class="logic-formula"><b>Fórmula:</b> Paneles * Capacidad panel * Radiación * Turnos</div>
+              </div>
+            </td>
+            <td>Energía generada estimada que se consume directamente in situ en las horas de actividad productiva.</td>
+          </tr>
+          <tr data-sheet="bases">
+            <td>
+              <span class="var-name">Generación mensual a inyectar</span>
+            </td>
+            <td><span class="var-code">r.generacionMensualInyectar</span></td>
+            <td><span class="badge">Bases de Datos!C35</span></td>
+            <td><span class="var-val">409.349</span></td>
+            <td>
+              <div class="formula-container">
+                <div class="excel-formula"><span class="excel-formula-tag">Excel</span> =C24*C15*C20*(30-C37)</div>
+                <div class="logic-formula"><b>Fórmula:</b> Paneles * Capacidad panel * Radiación * (30 - Turnos)</div>
+              </div>
+            </td>
+            <td>Excedentes solares generados en periodos sin actividad (fines de semana, noches) que se inyectan a la red.</td>
+          </tr>
+          <tr data-sheet="bases">
+            <td>
+              <span class="var-name">Generación total</span>
+            </td>
+            <td><span class="var-code">r.generacionTotal</span></td>
+            <td><span class="badge">Bases de Datos!C36</span></td>
+            <td><span class="var-val">438.588</span></td>
+            <td>
+              <div class="formula-container">
+                <div class="excel-formula"><span class="excel-formula-tag">Excel</span> =C34+C35</div>
+                <div class="logic-formula"><b>Fórmula:</b> Gen. Consumir + Gen. Inyectar</div>
+              </div>
+            </td>
+            <td>Generación total mensual producida por la solución solar completa (autoconsumo + inyección).</td>
+          </tr>
+          <tr data-sheet="bases">
+            <td>
+              <span class="var-name">Turnos de operación</span>
+            </td>
+            <td><span class="var-code">r.turnosOperacion</span></td>
+            <td><span class="badge">Bases de Datos!C37</span></td>
+            <td><span class="var-val">2</span></td>
+            <td>
+              <div class="formula-container">
+                <div class="excel-formula"><span class="excel-formula-tag">Excel</span> Valor directo: 2</div>
+                <div class="logic-formula">Turnos operativos activos</div>
+              </div>
+            </td>
+            <td>Cantidad de turnos de operación activos en la sede del usuario.</td>
+          </tr>
+          <tr data-sheet="cotizacion bases">
+            <td>
+              <span class="var-name">Ahorro en CO₂ (ton/año)</span>
+            </td>
+            <td><span class="var-code">r.ahorroCo2</span></td>
+            <td><span class="badge">Cotizacion!F22 &rarr; Bases!C38</span></td>
+            <td><span class="var-val">2,05</span></td>
+            <td>
+              <div class="formula-container">
+                <div class="excel-formula"><span class="excel-formula-tag">Excel Cotizacion!F22</span> ='Bases de Datos'!C38</div>
+                <div class="excel-formula"><span class="excel-formula-tag">Excel Bases!C38</span> =(((C36*12)/1000)/1000)*0.39</div>
+                <div class="logic-formula"><b>Fórmula:</b> (((GenTotal * 12) / 1000) / 1000) * 0.39</div>
+              </div>
+            </td>
+            <td>Toneladas de emisiones de CO₂ evitadas anualmente según el factor del Sistema Interconectado Nacional (0.39 tCO₂/MWh).</td>
+          </tr>
+          <tr data-sheet="cotizacion bases">
+            <td>
+              <span class="var-name">Árboles</span>
+            </td>
+            <td><span class="var-code">r.arboles</span></td>
+            <td><span class="badge">Cotizacion!F24 &rarr; Bases!C39</span></td>
+            <td><span class="var-val">4,11</span></td>
+            <td>
+              <div class="formula-container">
+                <div class="excel-formula"><span class="excel-formula-tag">Excel Cotizacion!F24</span> ='Bases de Datos'!C39</div>
+                <div class="excel-formula"><span class="excel-formula-tag">Excel Bases!C39</span> =C38*2</div>
+                <div class="logic-formula"><b>Fórmula:</b> Ahorro en CO₂ (ton/año) * 2</div>
+              </div>
+            </td>
+            <td>Equivalente en árboles adultos necesarios para absorber las toneladas de CO₂ mitigadas al año.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- CARD 7 -->
+    <div class="card card-highlight card-table-section">
+      <h3>
+        <span>7. COTIZACIÓN</span>
+        <span class="badge-card">Presupuesto y Retorno de Inversión</span>
+      </h3>
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 20%;">Nombre en Plataforma (Imagen)</th>
+            <th style="width: 14%;">Variable Código</th>
+            <th style="width: 13%;">Celda Excel</th>
+            <th style="width: 11%;">Valor Ejemplo</th>
+            <th style="width: 26%;">Fórmula de Excel y Lógica</th>
+            <th style="width: 16%;">Función en el Sistema</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr data-sheet="bases cotizacion">
+            <td>
+              <span class="var-name">Costo por vatio (COP)</span>
+            </td>
+            <td><span class="var-code">r.costoVatio * inp.trm</span></td>
+            <td><span class="badge">Bases!L4:O36 &amp; Cotizacion!C5</span></td>
+            <td><span class="var-val">$ 7.800 COP</span></td>
+            <td>
+              <div class="formula-container">
+                <div class="excel-formula"><span class="excel-formula-tag">Excel</span> =VLOOKUP(F6,'Bases de Datos'!L4:O36,2,TRUE)*C5</div>
+                <div class="logic-formula"><b>BUSCARV</b>(Wp instalados; Bases!L4:O36; 2; VERDADERO) * TRM</div>
+              </div>
+            </td>
+            <td>Costo por cada vatio instalado en moneda nacional; a mayor tamaño del proyecto menor es el valor por economías de escala.</td>
+          </tr>
+          <tr data-sheet="cotizacion bases">
+            <td>
+              <span class="var-name">Costo de la solución</span>
+            </td>
+            <td><span class="var-code">r.costoSolucion</span></td>
+            <td><span class="badge">Cotizacion!F19</span></td>
+            <td><span class="var-val">$ 29.016.000 COP</span></td>
+            <td>
+              <div class="formula-container">
+                <div class="excel-formula"><span class="excel-formula-tag">Excel</span> =VLOOKUP(F6,'Bases de Datos'!L4:O36,2,TRUE)*F6*C5</div>
+                <div class="logic-formula"><b>Fórmula:</b> Costo por vatio (USD) * Wp instalados * TRM</div>
+              </div>
+            </td>
+            <td>Presupuesto total llave en mano (equipos, estructuras, ingeniería, trámites e instalación) en pesos colombianos.</td>
+          </tr>
+          <tr data-sheet="financiero cotizacion">
+            <td>
+              <span class="var-name">Ahorro mensual</span>
+            </td>
+            <td><span class="var-code">r.ahorroMensualCop</span></td>
+            <td><span class="badge">Modelo Financiero Año!B6</span></td>
+            <td><span class="var-val">$ 416.039 COP</span></td>
+            <td>
+              <div class="formula-container">
+                <div class="excel-formula"><span class="excel-formula-tag">Excel</span> =((Cotizacion!C10*Cotizacion!F14))</div>
+                <div class="logic-formula"><b>Fórmula:</b> Valor kWh factura * Producción mensual</div>
+              </div>
+            </td>
+            <td>Ahorro económico mensual estimado directamente en la factura de servicio eléctrico.</td>
+          </tr>
+          <tr data-sheet="cotizacion financiero">
+            <td>
+              <span class="var-name">Ahorro en 30 años</span>
+            </td>
+            <td><span class="var-code">r.ahorro30Anios</span></td>
+            <td><span class="badge">Cotizacion!F26</span></td>
+            <td><span class="var-val">$ 296.642.273 COP</span></td>
+            <td>
+              <div class="formula-container">
+                <div class="excel-formula"><span class="excel-formula-tag">Excel</span> =+'Modelo Financiero Año'!AF21</div>
+                <div class="logic-formula"><b>Fórmula:</b> Flujo neto acumulado en el año 30</div>
+              </div>
+            </td>
+            <td>Ganancia económica neta estimada a lo largo de los 30 años de vida útil del sistema considerando degradación e inflación.</td>
+          </tr>
+          <tr data-sheet="cotizacion financiero">
+            <td>
+              <span class="var-name">Retorno</span>
+            </td>
+            <td><span class="var-code">r.retornoMeses / r.retornoAnios</span></td>
+            <td><span class="badge">Cotizacion!F28</span></td>
+            <td><span class="var-val">42 meses (4 años)</span></td>
+            <td>
+              <div class="formula-container">
+                <div class="excel-formula"><span class="excel-formula-tag">Excel</span> ='Modelo Financiero Mes'!E7 <br/>=COUNTIF(B21:KP21,"<0")</div>
+                <div class="logic-formula"><b>CONTAR.SI</b>(Flujo acumulado < 0) [Meses y Años]</div>
+              </div>
+            </td>
+            <td>Tiempo exacto en el que la inversión queda amortizada completamente por los ahorros e incentivos fiscales.</td>
+          </tr>
+          <tr data-sheet="cotizacion financiero">
+            <td>
+              <span class="var-name">TIR</span>
+            </td>
+            <td><span class="var-code">r.tir</span></td>
+            <td><span class="badge">Cotizacion!F30</span></td>
+            <td><span class="var-val">27,22%</span></td>
+            <td>
+              <div class="formula-container">
+                <div class="excel-formula"><span class="excel-formula-tag">Excel</span> =+IRR(B21:AA21)</div>
+                <div class="logic-formula"><b>TIR</b>(Flujos acumulados del año 0 al 25)</div>
+              </div>
+            </td>
+            <td>Tasa Interna de Retorno anualizada, que mide el rendimiento financiero y la rentabilidad neta del proyecto fotovoltaico.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <script>
+    mermaid.initialize({ startOnLoad: true, theme: 'default' });
+
+    // LÓGICA DE BÚSQUEDA Y FILTRO DINÁMICO
+    (function() {
+      const searchInput = document.getElementById('tableSearch');
+      const clearSearchBtn = document.getElementById('clearSearch');
+      const filterPills = document.querySelectorAll('.filter-pill[data-filter]');
+      const matchCount = document.getElementById('matchCount');
+      const resetFiltersBtn = document.getElementById('resetFilters');
+      const noResultsCard = document.getElementById('noResultsCard');
+      const btnResetNoResults = document.getElementById('btnResetNoResults');
+
+      let currentSheetFilter = 'all';
+
+      function normalize(text) {
+        return (text || '')
+          .toString()
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .toLowerCase()
+          .trim();
+      }
+
+      function applyFilter() {
+        const query = normalize(searchInput.value);
+        clearSearchBtn.style.display = searchInput.value ? 'flex' : 'none';
+
+        let totalVariables = 0;
+        let visibleVariables = 0;
+
+        const tableSections = document.querySelectorAll('.card-table-section');
+
+        tableSections.forEach(section => {
+          const rows = section.querySelectorAll('tbody tr');
+          let sectionVisibleRows = 0;
+
+          rows.forEach(row => {
+            totalVariables++;
+            const sheet = row.getAttribute('data-sheet') || '';
+            const rowText = normalize(row.textContent);
+
+            const matchesSheet = (currentSheetFilter === 'all') || sheet.includes(currentSheetFilter);
+            const matchesQuery = !query || rowText.includes(query);
+
+            if (matchesSheet && matchesQuery) {
+              row.style.display = '';
+              sectionVisibleRows++;
+              visibleVariables++;
+            } else {
+              row.style.display = 'none';
+            }
+          });
+
+          // Ocultar la tarjeta completa si no tiene filas coincidentes
+          section.style.display = sectionVisibleRows > 0 ? '' : 'none';
+        });
+
+        matchCount.textContent = `${visibleVariables} de ${totalVariables}`;
+        noResultsCard.style.display = visibleVariables === 0 ? 'block' : 'none';
+      }
+
+      // Eventos de Búsqueda
+      searchInput.addEventListener('input', applyFilter);
+
+      clearSearchBtn.addEventListener('click', function() {
+        searchInput.value = '';
+        searchInput.focus();
+        applyFilter();
+      });
+
+      // Eventos de Filtro por Hoja de Excel
+      filterPills.forEach(pill => {
+        pill.addEventListener('click', function() {
+          filterPills.forEach(p => p.classList.remove('active'));
+          this.classList.add('active');
+          currentSheetFilter = this.getAttribute('data-filter');
+          applyFilter();
+        });
+      });
+
+      function resetAll() {
+        searchInput.value = '';
+        currentSheetFilter = 'all';
+        filterPills.forEach(p => {
+          if (p.getAttribute('data-filter') === 'all') p.classList.add('active');
+          else p.classList.remove('active');
+        });
+        applyFilter();
+      }
+
+      resetFiltersBtn.addEventListener('click', resetAll);
+      if (btnResetNoResults) btnResetNoResults.addEventListener('click', resetAll);
+
+      // SIMULADOR DE FÓRMULA OFICIAL ANDRÉS
+      const simConsumo = document.getElementById('simConsumo');
+      const simPotPanel = document.getElementById('simPotPanel');
+      const simIrrad = document.getElementById('simIrrad');
+      const resConsumoAnual = document.getElementById('resConsumoAnual');
+      const resProdPorPanel = document.getElementById('resProdPorPanel');
+      const resPaneles = document.getElementById('resPaneles');
+      const resKwp = document.getElementById('resKwp');
+      const resGenAnual = document.getElementById('resGenAnual');
+
+      function recalculateSimulator() {
+        if (!simConsumo || !simPotPanel || !simIrrad) return;
+        const consumoM = parseFloat(simConsumo.value) || 0;
+        const potW = parseFloat(simPotPanel.value) || 0;
+        const irrad = parseFloat(simIrrad.value) || 0;
+        const pr = 0.8;
+        const dias = 365;
+
+        // 1. E_consumoAnual = ConsumoMensual * 12
+        const eConsumoAnual = consumoM * 12;
+
+        // 2. Prod anual por panel = PotPanel(kWp) * 365 * irradiancia * 80%
+        const potKwp = potW / 1000;
+        const prodPanel = potKwp * dias * irrad * pr;
+
+        // 3. NroPaneles = E_consumoAnual / (PotPanel * 365 * irradiancia * 80%)
+        const exactPanels = prodPanel > 0 ? eConsumoAnual / prodPanel : 0;
+        const nroPaneles = Math.max(1, Math.ceil(exactPanels));
+
+        // Potencia Instalada
+        const installedKwp = nroPaneles * potKwp;
+
+        // 4. E_genAnual = NroPaneles * PotPanel(kWp) * 365 * irradiancia * 80%
+        const eGenAnual = Math.round(nroPaneles * potKwp * dias * irrad * pr);
+
+        resConsumoAnual.textContent = `${Math.round(eConsumoAnual).toLocaleString()} kWh`;
+        resProdPorPanel.textContent = `${prodPanel.toFixed(1).replace('.', ',')} kWh`;
+        resPaneles.textContent = `${exactPanels.toFixed(2)} → ${nroPaneles} pan.`;
+        resKwp.textContent = `${installedKwp.toFixed(2)} kWp`;
+        resGenAnual.textContent = `${eGenAnual.toLocaleString()} kWh/año`;
+      }
+
+      [simConsumo, simPotPanel, simIrrad].forEach(inp => {
+        if (inp) inp.addEventListener('input', recalculateSimulator);
+      });
+      recalculateSimulator();
+
+      // Inicializar contador de la tabla
+      applyFilter();
+    })();
+  </script>
+</body>
+</html>

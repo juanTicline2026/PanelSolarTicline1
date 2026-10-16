@@ -122,23 +122,23 @@ export const ResultsDashboard: React.FC<ResultsDashboardProps> = ({
           {/* Cost and Investment Breakdown */}
           <div className="p-5 rounded-2xl bg-slate-900/90 border border-slate-800 grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
             <div className="flex flex-col">
-              <span className="text-xs text-slate-400">Inversión Llave en Mano (Equipos + Obra):</span>
+              <span className="text-xs text-slate-400">Subtotal Llave en Mano (sin IVA):</span>
               <span className="text-lg font-bold text-slate-200 tabular-nums">
                 {formatCurrencyValue(results.estimatedGrossCost, inputs.currencyCode)}
               </span>
             </div>
 
             <div className="flex flex-col">
-              <span className="text-xs text-emerald-400 font-semibold flex items-center gap-1">
-                <Award className="w-3.5 h-3.5" /> Beneficio Fiscal Estimado (-20%):
+              <span className="text-xs text-amber-400 font-semibold flex items-center gap-1">
+                <Award className="w-3.5 h-3.5" /> IVA (19% sobre base gravada):
               </span>
-              <span className="text-lg font-bold text-emerald-400 tabular-nums">
-                - {formatCurrencyValue(results.taxIncentiveAmount, inputs.currencyCode)}
+              <span className="text-lg font-bold text-amber-400 tabular-nums">
+                + {formatCurrencyValue(results.ivaAmount, inputs.currencyCode)}
               </span>
             </div>
 
             <div className="flex flex-col md:text-right">
-              <span className="text-xs text-slate-400">Inversión Neta Final Estimada:</span>
+              <span className="text-xs text-slate-400">Total Inversión (IVA incluido):</span>
               <span className="text-xl sm:text-2xl font-black font-display text-white tabular-nums">
                 {formatCurrencyValue(results.netInvestmentCost, inputs.currencyCode)}
               </span>

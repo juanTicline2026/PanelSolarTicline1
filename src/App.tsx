@@ -13,19 +13,38 @@ import { LiveStudio } from './components/LiveStudio';
 import { FaqSection } from './components/FaqSection';
 import { QuoteModal } from './components/QuoteModal';
 import { LiveReflectionSidebar } from './components/LiveReflectionSidebar';
+import { Cotizador2Calculator } from './components/Cotizador2Calculator';
 import { CURRENCIES, CITIES } from './constants/solarData';
 import { SolarInputs } from './types/solar';
 import { calculateSolarSystem } from './utils/solarCalculator';
 import { fetchNasaPowerData } from './services/nasaPowerService';
-import { Sun, Check, Zap, Sparkles, Sliders } from 'lucide-react';
+import { Sun, Check, Zap, Sparkles, Sliders, ChevronDown } from 'lucide-react';
+
+function Collapsible({ title, id, children }: { title: string; id?: string; children: React.ReactNode }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <section id={id} className="scroll-mt-20 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/90 overflow-hidden">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className="w-full flex items-center justify-between px-6 py-4 text-left font-bold text-slate-900 dark:text-white hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors"
+      >
+        <span>{title}</span>
+        <ChevronDown className={`w-5 h-5 text-emerald-500 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && <div className="p-4 sm:p-6 border-t border-slate-200 dark:border-slate-800">{children}</div>}
+    </section>
+  );
+}
 
 export default function App() {
   const [darkMode, setDarkMode] = useState<boolean>(() => {
     return true; // Default to sleek dark mode with vibrant accents as requested
   });
 
-  const [selectedCurrency, setSelectedCurrency] = useState<string>('USD');
-  const [activeViewMode, setActiveViewMode] = useState<'wizard' | 'studio'>('wizard');
+  const [selectedCurrency, setSelectedCurrency] = useState<string>('COP');
+  const [activeViewMode, setActiveViewMode] = useState<'cotizador' | 'wizard' | 'studio'>('cotizador');
   const [wizardStep, setWizardStep] = useState<number>(1);
   const [isQuoteModalOpen, setIsQuoteModalOpen] = useState<boolean>(false);
   const [isLoadingNasa, setIsLoadingNasa] = useState<boolean>(false);
@@ -33,7 +52,7 @@ export default function App() {
   // Initial Inputs with NASA POWER coordinates (defaults to CDMX)
   const [inputs, setInputs] = useState<SolarInputs>({
     calculationMode: 'bill',
-    billAmount: CURRENCIES.USD.defaultBillAmount,
+    billAmount: CURRENCIES.COP.defaultBillAmount,
     monthlyKwh: 450,
     sector: 'residencial',
     cityId: 'mx-cdmx',
@@ -45,7 +64,7 @@ export default function App() {
     panelWattage: 550,
     systemType: 'on_grid',
     roofType: 'inclinado',
-    currencyCode: 'USD',
+    currencyCode: 'COP',
   });
 
   // Query NASA POWER Data Access Viewer on coordinate change
@@ -145,12 +164,23 @@ export default function App() {
                 Herramienta de Cotización
               </span>
               <h2 className="text-2xl sm:text-3xl font-extrabold font-display text-slate-900 dark:text-white">
-                {activeViewMode === 'wizard' ? 'Calculadora Asistida Paso a Paso' : 'Estudio de Ingeniería en Tiempo Real'}
+                {activeViewMode === 'cotizador' ? 'Cotizador Solar (Cotizador2)' : activeViewMode === 'wizard' ? 'Calculadora Asistida Paso a Paso' : 'Estudio de Ingeniería en Tiempo Real'}
               </h2>
             </div>
 
             {/* Quick Switch Button */}
             <div className="p-1 rounded-xl bg-slate-200/80 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 flex items-center self-start sm:self-auto">
+              <button
+                type="button"
+                onClick={() => setActiveViewMode('cotizador')}
+                className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                  activeViewMode === 'cotizador'
+                    ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-emerald-400 shadow-sm'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                Cotizador
+              </button>
               <button
                 type="button"
                 onClick={() => setActiveViewMode('wizard')}
@@ -177,7 +207,9 @@ export default function App() {
             </div>
           </div>
 
-          {activeViewMode === 'wizard' ? (
+          {activeViewMode === 'cotizador' ? (
+            <Cotizador2Calculator />
+          ) : activeViewMode === 'wizard' ? (
             <div className="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/90 p-6 sm:p-10 shadow-xl space-y-8">
               
               {/* Wizard Steps Stepper */}
@@ -288,12 +320,12 @@ export default function App() {
         </section>
 
         {/* Interactive Roof Visualizer Section */}
-        <section className="space-y-4">
+        <Collapsible title="Simulador de Techo Solar">
           <RoofVisualizer results={results} inputs={inputs} />
-        </section>
+        </Collapsible>
 
         {/* NASA POWER Climatology and Satellite Radiation Profile */}
-        <section id="nasa-power" className="space-y-4 scroll-mt-20">
+        <Collapsible id="nasa-power" title="Perfil Solar NASA POWER">
           <NasaSolarProfile
             inputs={inputs}
             results={results}
@@ -301,22 +333,22 @@ export default function App() {
             onRefreshNasa={() => loadNasaData(inputs.latitude, inputs.longitude, inputs.cityId)}
             isLoadingNasa={isLoadingNasa}
           />
-        </section>
+        </Collapsible>
 
         {/* Financial ROI and 25-Year Projection Section */}
-        <section className="space-y-4">
+        <Collapsible title="Retorno de Inversión (ROI) y Proyección a 25 años">
           <FinancialProjectionChart results={results} inputs={inputs} />
-        </section>
+        </Collapsible>
 
         {/* Environmental Impact Proof Section */}
-        <section className="space-y-4">
+        <Collapsible title="Impacto Ambiental">
           <EnvironmentalImpact results={results} />
-        </section>
+        </Collapsible>
 
         {/* Technical FAQ Section */}
-        <section className="space-y-4">
+        <Collapsible title="Preguntas Frecuentes">
           <FaqSection />
-        </section>
+        </Collapsible>
 
       </main>
 

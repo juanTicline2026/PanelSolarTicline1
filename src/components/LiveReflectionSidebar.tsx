@@ -1,5 +1,5 @@
-import React from 'react';
-import { Zap, Sun, DollarSign, TrendingUp, Clock, Satellite, ArrowRight, ShieldCheck } from 'lucide-react';
+import React, { useState } from 'react';
+import { Zap, Sun, DollarSign, TrendingUp, Clock, Satellite, ArrowRight, ShieldCheck, Calculator, ChevronDown, ChevronUp } from 'lucide-react';
 import { SolarCalculationResults, SolarInputs } from '../types/solar';
 import { formatCurrencyValue, formatCompactCurrency } from '../utils/solarCalculator';
 
@@ -16,6 +16,7 @@ export const LiveReflectionSidebar: React.FC<LiveReflectionSidebarProps> = ({
   onOpenQuoteModal,
   onJumpToResults,
 }) => {
+  const [showFormulaDetails, setShowFormulaDetails] = useState(false);
   const cashflow = results.thirtyYearCashflow || results.twentyFiveYearCashflow;
   const maxCost = Math.max(...cashflow.map((d) => Math.max(d.costWithoutSolar, d.costWithSolar)), 1);
 
@@ -86,6 +87,56 @@ export const LiveReflectionSidebar: React.FC<LiveReflectionSidebarProps> = ({
               TIR: {results.estimatedRoiPercentage}%
             </span>
           </div>
+        </div>
+
+        {/* Fórmula Andrés (NASA POWER) 100% Integrada */}
+        <div className="rounded-xl border border-emerald-500/30 bg-slate-900/80 p-2.5 transition-all">
+          <button
+            type="button"
+            onClick={() => setShowFormulaDetails(!showFormulaDetails)}
+            className="w-full flex items-center justify-between text-left cursor-pointer group"
+          >
+            <span className="flex items-center gap-1.5 text-[11px] font-bold text-emerald-400 group-hover:text-emerald-300">
+              <Calculator className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Fórmula Andrés (NASA 100% Integrada)</span>
+            </span>
+            {showFormulaDetails ? (
+              <ChevronUp className="w-3.5 h-3.5 text-slate-400" />
+            ) : (
+              <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+            )}
+          </button>
+
+          {showFormulaDetails && (
+            <div className="mt-2.5 pt-2 border-t border-slate-800 space-y-2 text-[10.5px] animate-fadeIn">
+              <div className="bg-slate-950/70 p-2 rounded-lg border border-slate-800/80 font-mono">
+                <div className="text-emerald-400 font-bold mb-0.5">① E_consumoAnual = ConsumoMensual × 12</div>
+                <div className="text-slate-300">
+                  {results.monthlyConsumptionKwh.toLocaleString()} kWh × 12 = <span className="text-white font-bold">{results.annualConsumptionKwh.toLocaleString()} kWh/año</span>
+                </div>
+              </div>
+
+              <div className="bg-slate-950/70 p-2 rounded-lg border border-slate-800/80 font-mono">
+                <div className="text-emerald-400 font-bold mb-0.5">② NroPaneles = E_consumo / (PotPanel × 365 × Irrad × 80%)</div>
+                <div className="text-slate-400 text-[9.5px]">
+                  {results.annualConsumptionKwh.toLocaleString()} / ({(results.panelWattage / 1000).toFixed(3)} kWp × 365 × {results.effectiveHspUsed} × 0.8)
+                </div>
+                <div className="text-slate-300 mt-0.5">
+                  = {results.exactPanelCount} → <span className="text-emerald-400 font-bold">{results.panelCount} paneles ({results.actualInstalledKwp} kWp)</span>
+                </div>
+              </div>
+
+              <div className="bg-slate-950/70 p-2 rounded-lg border border-slate-800/80 font-mono">
+                <div className="text-emerald-400 font-bold mb-0.5">③ E_genAnual = NroPaneles × PotPanel × 365 × Irrad × 80%</div>
+                <div className="text-slate-400 text-[9.5px]">
+                  {results.panelCount} × {(results.panelWattage / 1000).toFixed(3)} kWp × 365 × {results.effectiveHspUsed} × 0.8
+                </div>
+                <div className="text-slate-300 mt-0.5">
+                  = <span className="text-white font-bold">{results.annualGenerationKwh.toLocaleString()} kWh/año</span> ({results.monthlyGenerationKwh.toLocaleString()} kWh/mes)
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Live Mini 30-Year Chart Preview (matching user image) */}

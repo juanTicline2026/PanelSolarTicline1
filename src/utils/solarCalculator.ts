@@ -1,5 +1,7 @@
-import { CITIES, CURRENCIES, PANEL_OPTIONS, ROOF_TYPES } from '../constants/solarData';
-import { MonthGenerationDetail, NasaMonthlyData, SolarCalculationResults, SolarInputs, YearProjection } from '../types/solar';
+import { CITIES, CURRENCIES } from '../constants/solarData';
+import { QUOTE_PARAMS } from '../constants/quoteCatalog';
+import { MonthGenerationDetail, NasaMonthlyData, QuoteBreakdown, SolarCalculationResults, SolarInputs, YearProjection } from '../types/solar';
+import { calculateQuoteCop } from './quoteEngine';
 
 const MONTH_KEYS: (keyof NasaMonthlyData)[] = [
   'JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN',
@@ -51,36 +53,46 @@ export function calculateSolarSystem(inputs: SolarInputs): SolarCalculationResul
     effectiveHsp = bestMonthHsp;
   }
 
-  // 3. Performance Ratio & Thermal Derating using NASA POWER 2-Meter Temperature (T2M)
+  // 3. Eficiencia del sistema (Excel: COTIZACIÓN!G9 & Fórmula Andrés: 80%)
   const avgTempC = nasa?.temperatureC?.ANN ?? 18.5;
-  // NOCT cell heating offset approx 22°C above ambient under operative solar irradiation
-  const operativeCellTemp = avgTempC + 22;
-  const thermalDeratingFraction = Math.max(0, (operativeCellTemp - 25) * 0.0035); // 0.35% / °C loss above 25°C STC
-  const basePr = 0.83; // inverter 98%, cables 2%, dust/soiling 3%, mismatch 2%
-  const effectivePr = Number((basePr * (1 - thermalDeratingFraction)).toFixed(2));
+  const effectivePr = QUOTE_PARAMS.systemEfficiency; // 0.80 = 80%
+  const DAYS_PER_YEAR = QUOTE_PARAMS.daysPerYear; // 365 días
 
-  // 4. System Sizing
+  // 4. Dimensionamiento con la Fórmula Oficial Andrés:
+  //    E_consumoAnual = ConsumoMensual(Factura) * 12
+  //    Irradiancia = Radiacion Solar Horizontal (Nasa Power) en kWh/m^2/day
+  //    NroPaneles = E_consumoAnual / (PotPanel(kWp) * 365dias * irradiancia * eficiencia(80%))
+  const annualConsumptionKwh = monthlyConsumptionKwh * 12;
   const coverageFraction = Math.min(1, Math.max(0.2, inputs.targetCoveragePct / 100));
   const targetMonthlyOffsetKwh = monthlyConsumptionKwh * coverageFraction;
-  const dailyTargetKwh = targetMonthlyOffsetKwh / 30;
+  const annualTargetKwh = targetMonthlyOffsetKwh * 12;
 
-  // Power required in kWp = Daily Target kWh / (Effective HSP * Effective PR)
-  const recommendedKwp = Number((dailyTargetKwh / (effectiveHsp * effectivePr)).toFixed(2));
+  const panelWattageKw = inputs.panelWattage / 1000; // PotPanel en kWp
+  // NroPaneles exacto según la fórmula
+  const exactPanelCount = annualTargetKwh / (panelWattageKw * DAYS_PER_YEAR * effectiveHsp * effectivePr);
+  const recommendedKwp = Number((exactPanelCount * panelWattageKw).toFixed(2));
 
-  // Panel counts
-  const panelWattageKw = inputs.panelWattage / 1000;
-  const panelCount = Math.max(1, Math.ceil(recommendedKwp / panelWattageKw));
+  // Número de paneles enteros y potencia instalada real
+  const panelCount = Math.max(1, Math.ceil(exactPanelCount));
   const actualInstalledKwp = Number((panelCount * panelWattageKw).toFixed(2));
 
-  // 5. NASA Monthly Generation Breakdown
+  // 5. Generación anual con la Fórmula Oficial Andrés:
+  //    E_genAnual = NroPaneles * PotPanel(kWp) * 365dias * irradiancia * eficiencia(80%)
+  const annualGenerationKwh = Math.round(panelCount * panelWattageKw * DAYS_PER_YEAR * effectiveHsp * effectivePr);
+  const monthlyGenerationKwh = Math.round(annualGenerationKwh / 12);
+
+  // Distribución mensual con la curva de radiación NASA POWER (suma = generación anual)
+  const monthWeights = MONTH_KEYS.map((key, idx) => {
+    const hsp = nasa?.irradianceGhi ? nasa.irradianceGhi[key] : effectiveHsp;
+    return hsp * DAYS_IN_MONTH[idx];
+  });
+  const totalWeight = monthWeights.reduce((acc, w) => acc + w, 0);
+
   const monthlyDetails: MonthGenerationDetail[] = MONTH_KEYS.map((key, idx) => {
     const monthHsp = nasa?.irradianceGhi ? nasa.irradianceGhi[key] : effectiveHsp;
     const monthTemp = nasa?.temperatureC ? nasa.temperatureC[key] : avgTempC;
-    const monthThermalLoss = Math.max(0, (monthTemp + 22 - 25) * 0.0035);
-    const monthPr = basePr * (1 - monthThermalLoss);
 
-    const days = DAYS_IN_MONTH[idx];
-    const genKwh = Math.round(actualInstalledKwp * monthHsp * monthPr * days);
+    const genKwh = Math.round((annualGenerationKwh * monthWeights[idx]) / totalWeight);
     const savings = Math.round(Math.min(genKwh, monthlyConsumptionKwh) * effectiveTariff);
 
     return {
@@ -93,12 +105,10 @@ export function calculateSolarSystem(inputs: SolarInputs): SolarCalculationResul
     };
   });
 
-  const annualGenerationKwh = monthlyDetails.reduce((acc, m) => acc + m.generationKwh, 0);
-  const monthlyGenerationKwh = Math.round(annualGenerationKwh / 12);
-
-  // 6. Roof Space Required
-  const panelSpec = PANEL_OPTIONS.find((p) => p.wattage === inputs.panelWattage) || PANEL_OPTIONS[1];
-  const roofAreaRequiredM2 = Math.round(panelCount * panelSpec.areaPerPanel);
+  // 6. Área requerida (Excel: COTIZACIÓN!E4 = (2.382 + 0.6 * 1.134) * kWp)
+  const roofAreaRequiredM2 = Math.round(
+    (QUOTE_PARAMS.areaPanelM2 + QUOTE_PARAMS.areaSpacingFactor * QUOTE_PARAMS.areaSpacingWidth) * actualInstalledKwp
+  );
 
   // 7. Savings & Financials
   const utilityFixedFeePct = 0.06;
@@ -113,17 +123,37 @@ export function calculateSolarSystem(inputs: SolarInputs): SolarCalculationResul
   const savingsPercentage = Math.round((monthlySavingsAmount / monthlyCurrentBill) * 100);
   const annualSavingsAmount = monthlySavingsAmount * 12;
 
-  // 8. Capital Cost & ROI
-  const baseCostPerKwpUsd = inputs.systemType === 'hybrid' ? 1650 : 1120;
-  const roofConfig = ROOF_TYPES.find((r) => r.id === inputs.roofType) || ROOF_TYPES[0];
-  const roofFactor = roofConfig.factorCost;
+  // 8. Costo de capital (fórmulas de la hoja COTIZACIÓN del Excel, calculadas en COP)
+  const quoteCop = calculateQuoteCop({
+    panelCount,
+    panelWattage: inputs.panelWattage,
+    systemType: inputs.systemType,
+    monthlyConsumptionKwh,
+    batteryCapacityKwh: inputs.batteryCapacityKwh,
+  });
+  // Conversión COP -> moneda seleccionada
+  const fx = (cop: number) => (cop * currency.toUsdRate) / CURRENCIES.COP.toUsdRate;
 
-  const scaleFactor = Math.max(0.85, 1 - Math.min(0.15, (actualInstalledKwp - 3) * 0.01));
-  const totalCostUsd = actualInstalledKwp * baseCostPerKwpUsd * roofFactor * scaleFactor;
-  
-  const estimatedGrossCost = Math.round(totalCostUsd * currency.toUsdRate);
-  const taxIncentiveAmount = Math.round(estimatedGrossCost * 0.20);
-  const netInvestmentCost = estimatedGrossCost - taxIncentiveAmount;
+  const quote: QuoteBreakdown = {
+    inverterReference: quoteCop.inverterReference,
+    inverterCount: quoteCop.inverterCount,
+    panelReference: quoteCop.panelReference,
+    batteryCount: quoteCop.batteryCount,
+    lines: quoteCop.lines.map((l) => ({ concept: l.concept, cost: Math.round(fx(l.cost)), price: Math.round(fx(l.price)) })),
+    installationSubtotal: Math.round(fx(quoteCop.installationSubtotalPrice)),
+    preliminarySubtotal: Math.round(fx(quoteCop.preliminarySubtotal)),
+    upmeCertificate: Math.round(fx(quoteCop.upmeCertificate)),
+    liabilityInsurance: Math.round(fx(quoteCop.liabilityInsurance)),
+    salesCommission: Math.round(fx(quoteCop.salesCommission)),
+    subtotal: Math.round(fx(quoteCop.subtotal)),
+    iva: Math.round(fx(quoteCop.iva)),
+    total: Math.round(fx(quoteCop.subtotal)) + Math.round(fx(quoteCop.iva)),
+    pricePerKwp: Math.round(fx(quoteCop.pricePerKwp)),
+  };
+
+  const estimatedGrossCost = quote.subtotal; // Subtotal sin IVA
+  const ivaAmount = quote.iva;
+  const netInvestmentCost = quote.total; // Total con IVA (Excel: COTIZACIÓN!D47)
 
   const paybackYears = Number(
     Math.min(25, Math.max(1.5, netInvestmentCost / Math.max(1, annualSavingsAmount))).toFixed(1)
@@ -178,14 +208,18 @@ export function calculateSolarSystem(inputs: SolarInputs): SolarCalculationResul
   const cumulative30YearSavings = thirtyYearCashflow[thirtyYearCashflow.length - 1].netCumulativeSavings;
 
   // 10. Environmental Impact
-  const annualCo2TonsAvoided = Number(((annualGenerationKwh * 0.44) / 1000).toFixed(2));
-  const treesEquivalentCount = Math.round((annualCo2TonsAvoided * 1000) / 21.8);
+  // Excel: COTIZACIÓN!E3 (CO2 = kWh * 0.677 / 1000) y C3 (árboles = 0.018 * kWh)
+  const annualCo2TonsAvoided = Number(((annualGenerationKwh * QUOTE_PARAMS.co2TonsPerMwh) / 1000).toFixed(2));
+  const treesEquivalentCount = Math.round(QUOTE_PARAMS.treesPerKwh * annualGenerationKwh);
   const carsKmAvoided = Math.round((annualCo2TonsAvoided * 1000) / 0.192);
   const homesPoweredEquivalent = Number((annualGenerationKwh / 3600).toFixed(1));
 
   return {
     monthlyConsumptionKwh: Math.round(monthlyConsumptionKwh),
     targetMonthlyOffsetKwh: Math.round(targetMonthlyOffsetKwh),
+    annualConsumptionKwh: Math.round(annualConsumptionKwh),
+    exactPanelCount: Number(exactPanelCount.toFixed(3)),
+    systemEfficiency: effectivePr,
     recommendedKwp,
     panelCount,
     panelWattage: inputs.panelWattage,
@@ -210,7 +244,7 @@ export function calculateSolarSystem(inputs: SolarInputs): SolarCalculationResul
     annualSavingsAmount: Math.round(annualSavingsAmount),
 
     estimatedGrossCost,
-    taxIncentiveAmount,
+    ivaAmount,
     netInvestmentCost,
     paybackYears,
     estimatedRoiPercentage,
@@ -224,6 +258,8 @@ export function calculateSolarSystem(inputs: SolarInputs): SolarCalculationResul
 
     twentyFiveYearCashflow,
     thirtyYearCashflow,
+
+    quote,
   };
 }
 

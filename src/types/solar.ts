@@ -90,6 +90,29 @@ export interface MonthGenerationDetail {
   savingsMoney: number;
 }
 
+export interface QuoteLine {
+  concept: string;
+  cost: number;  // sin margen, en la moneda seleccionada
+  price: number; // con margen, en la moneda seleccionada
+}
+
+export interface QuoteBreakdown {
+  inverterReference: string;
+  inverterCount: number;
+  panelReference: string;
+  batteryCount: number;
+  lines: QuoteLine[];
+  installationSubtotal: number;
+  preliminarySubtotal: number;
+  upmeCertificate: number;
+  liabilityInsurance: number;
+  salesCommission: number;
+  subtotal: number;
+  iva: number;
+  total: number;
+  pricePerKwp: number;
+}
+
 export interface SolarCalculationResults {
   monthlyConsumptionKwh: number;
   targetMonthlyOffsetKwh: number;
@@ -100,6 +123,11 @@ export interface SolarCalculationResults {
   monthlyGenerationKwh: number;
   annualGenerationKwh: number;
   roofAreaRequiredM2: number;
+
+  // Fórmula Oficial Andrés (Dimensionamiento e Integración NASA POWER)
+  annualConsumptionKwh: number; // E_consumoAnual = ConsumoMensual * 12
+  exactPanelCount: number;      // NroPaneles antes del redondeo
+  systemEfficiency: number;     // Eficiencia del sistema (0.80 = 80%)
   
   // NASA POWER specific engineering outputs
   effectiveHspUsed: number;
@@ -119,7 +147,7 @@ export interface SolarCalculationResults {
   annualSavingsAmount: number;
   
   estimatedGrossCost: number;
-  taxIncentiveAmount: number;
+  ivaAmount: number;
   netInvestmentCost: number;
   paybackYears: number;
   estimatedRoiPercentage: number;
@@ -135,4 +163,7 @@ export interface SolarCalculationResults {
   // Projections
   twentyFiveYearCashflow: YearProjection[];
   thirtyYearCashflow: YearProjection[];
+
+  // Cotización detallada (fórmulas del Excel)
+  quote: QuoteBreakdown;
 }
