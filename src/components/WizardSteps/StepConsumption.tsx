@@ -1,5 +1,5 @@
 import React from 'react';
-import { Home, Building2, Factory, Zap, DollarSign, HelpCircle } from 'lucide-react';
+import { Home, Building2, Zap, DollarSign, HelpCircle } from 'lucide-react';
 import { CURRENCIES, SECTORS } from '../../constants/solarData';
 import { CalculationMode, SectorType, SolarInputs } from '../../types/solar';
 
@@ -60,9 +60,10 @@ export const StepConsumption: React.FC<StepConsumptionProps> = ({
         <label className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 flex items-center gap-1.5">
           Tipo de Tarifa / Sector
         </label>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {SECTORS.map((sector) => {
             const isSelected = inputs.sector === sector.id;
+            const sectorTariff = currency.defaultRatesPerKwh[sector.id as SectorType];
             return (
               <button
                 key={sector.id}
@@ -84,10 +85,9 @@ export const StepConsumption: React.FC<StepConsumptionProps> = ({
                   >
                     {sector.id === 'residencial' && <Home className="w-5 h-5" />}
                     {sector.id === 'comercial' && <Building2 className="w-5 h-5" />}
-                    {sector.id === 'industrial' && <Factory className="w-5 h-5" />}
                   </div>
                   <span className="text-xs text-slate-400">
-                    Tarifa: {currency.symbol} {tariff} / kWh
+                    Tarifa: {currency.symbol} {sectorTariff} / kWh
                   </span>
                 </div>
                 <h3 className="text-sm font-bold text-slate-900 dark:text-white">{sector.name}</h3>

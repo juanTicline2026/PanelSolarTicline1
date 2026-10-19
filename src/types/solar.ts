@@ -1,4 +1,4 @@
-export type SectorType = 'residencial' | 'comercial' | 'industrial';
+export type SectorType = 'residencial' | 'comercial';
 export type SystemType = 'on_grid' | 'hybrid';
 export type RoofType = 'inclinado' | 'plano' | 'lamina';
 export type CalculationMode = 'bill' | 'kwh';
@@ -13,7 +13,7 @@ export interface CurrencyConfig {
   defaultRatesPerKwh: {
     residencial: number;
     comercial: number;
-    industrial: number;
+    industrial?: number;
   };
 }
 

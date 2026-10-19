@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
-import { Zap, Sun, DollarSign, TrendingUp, Clock, Satellite, ArrowRight, ShieldCheck, Calculator, ChevronDown, ChevronUp } from 'lucide-react';
+import { Zap, Sun, DollarSign, TrendingUp, Clock, Satellite, ArrowRight, ShieldCheck, Calculator, ChevronDown, ChevronUp, FileDown, Loader2 } from 'lucide-react';
 import { SolarCalculationResults, SolarInputs } from '../types/solar';
 import { formatCurrencyValue, formatCompactCurrency } from '../utils/solarCalculator';
+import { generateProposalPdf } from '../utils/pdfGenerator';
+import { CITIES } from '../constants/solarData';
 
 interface LiveReflectionSidebarProps {
   results: SolarCalculationResults;
@@ -17,8 +19,45 @@ export const LiveReflectionSidebar: React.FC<LiveReflectionSidebarProps> = ({
   onJumpToResults,
 }) => {
   const [showFormulaDetails, setShowFormulaDetails] = useState(false);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const cashflow = results.thirtyYearCashflow || results.twentyFiveYearCashflow;
   const maxCost = Math.max(...cashflow.map((d) => Math.max(d.costWithoutSolar, d.costWithSolar)), 1);
+
+  const cityName = CITIES.find((c) => c.id === inputs.cityId)?.name || 'Antioquia';
+
+  const handleDownloadPdf = async () => {
+    try {
+      setIsGeneratingPdf(true);
+      await generateProposalPdf({
+        projectName: 'Proyecto Solar Residencial',
+        clientName: 'Cliente Solar',
+        department: cityName,
+        consumoKwh: results.monthlyConsumptionKwh,
+        costoKwhBase: results.effectiveTariffPerKwh,
+        radiacion: results.effectiveHspUsed,
+        potenciaPanel: results.panelWattage,
+        panelCount: results.panelCount,
+        kwp: results.actualInstalledKwp,
+        areaRequeridaM2: results.roofAreaRequiredM2,
+        produccionMensualKwh: results.monthlyGenerationKwh,
+        produccionAnualKwh: results.annualGenerationKwh,
+        ahorroPct: results.savingsPercentage,
+        ahorroCo2Ton: results.annualCo2TonsAvoided,
+        arboles: results.treesEquivalentCount,
+        costoSolucionCop: results.netInvestmentCost,
+        ahorroMensualCop: results.monthlySavingsAmount,
+        ahorro30AniosCop: results.cumulative30YearSavings,
+        retornoMeses: Math.round(results.paybackYears * 12),
+        retornoAnios: results.paybackYears,
+        tirPct: results.estimatedRoiPercentage,
+      });
+    } catch (err) {
+      console.error('Error generating PDF:', err);
+      alert('Ocurrió un error al generar el PDF de cotización.');
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  };
 
   return (
     <div className="sticky top-20 rounded-3xl border border-emerald-500/30 bg-gradient-to-b from-slate-900 via-slate-950 to-slate-950 p-5 sm:p-6 text-white shadow-2xl space-y-5 overflow-hidden relative animate-fadeIn">
@@ -212,6 +251,26 @@ export const LiveReflectionSidebar: React.FC<LiveReflectionSidebarProps> = ({
         <div className="space-y-2 pt-1">
           <button
             type="button"
+            id="btn-generar-pdf-sidebar"
+            onClick={handleDownloadPdf}
+            disabled={isGeneratingPdf}
+            className="w-full py-3 px-3 rounded-xl text-xs sm:text-sm font-extrabold text-white bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:from-emerald-600 hover:to-teal-600 shadow-md shadow-emerald-500/25 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-70"
+          >
+            {isGeneratingPdf ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Generando PDF Oficial (8 Págs)...</span>
+              </>
+            ) : (
+              <>
+                <FileDown className="w-4 h-4" />
+                <span>Generar PDF de Cotización</span>
+              </>
+            )}
+          </button>
+
+          <button
+            type="button"
             onClick={onJumpToResults}
             className="w-full py-2.5 px-3 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-200 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
           >
@@ -222,9 +281,9 @@ export const LiveReflectionSidebar: React.FC<LiveReflectionSidebarProps> = ({
           <button
             type="button"
             onClick={onOpenQuoteModal}
-            className="w-full py-3 px-3 rounded-xl text-xs sm:text-sm font-extrabold text-slate-950 bg-gradient-to-r from-emerald-400 via-teal-300 to-amber-300 hover:from-emerald-300 hover:to-amber-200 shadow-md shadow-emerald-500/20 hover:scale-105 active:scale-95 transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer"
+            className="w-full py-2.5 px-3 rounded-xl text-xs font-bold text-slate-900 bg-emerald-400 hover:bg-emerald-300 transition-all flex items-center justify-center gap-2 cursor-pointer"
           >
-            <span>Solicitar Cotización de este Sistema</span>
+            <span>Solicitar Cotización Formal</span>
           </button>
         </div>
 

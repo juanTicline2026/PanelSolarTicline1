@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { FileDown, Loader2 } from 'lucide-react';
 import {
   COTIZADOR2_DEFAULTS,
   Cotizador2Inputs,
@@ -7,6 +8,7 @@ import {
   RadiacionTipo,
   calculateCotizador2,
 } from '../utils/cotizador2Engine';
+import { generateProposalPdf } from '../utils/pdfGenerator';
 
 const nf = (v: number, d = 0) =>
   new Intl.NumberFormat('es-CO', { minimumFractionDigits: d, maximumFractionDigits: d }).format(v);
@@ -60,9 +62,51 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
 
 export function Cotizador2Calculator() {
   const [inp, setInp] = useState<Cotizador2Inputs>(COTIZADOR2_DEFAULTS);
+  const [projectName, setProjectName] = useState('Finca Bolombolo');
+  const [clientName, setClientName] = useState('Propietario Finca Bolombolo');
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+
   const set = (u: Partial<Cotizador2Inputs>) => setInp((p) => ({ ...p, ...u }));
   const r = useMemo(() => calculateCotizador2(inp), [inp]);
   const pct = (v: number) => `${nf(v * 100, 2)}%`;
+
+  const handleGeneratePdf = async () => {
+    try {
+      setIsGeneratingPdf(true);
+      await generateProposalPdf({
+        projectName: projectName.trim() || 'Finca Bolombolo',
+        clientName: clientName.trim() || 'Propietario Finca Bolombolo',
+        department: inp.departamento,
+        trm: inp.trm,
+        consumoKwh: inp.consumoKwh,
+        costoKwhBase: inp.costoKwhBase,
+        valorKwhFactura: r.valorKwhFactura,
+        radiacion: r.radiacion,
+        potenciaPanel: inp.potenciaPanel,
+        panelCount: r.requerido.paneles,
+        kwp: r.requerido.kwp,
+        areaRequeridaM2: r.requerido.areaRequerida,
+        produccionMensualKwh: r.requerido.produccionMensual,
+        produccionAnualKwh: r.requerido.produccionMensual * 12,
+        ahorroPct: r.requerido.ahorro,
+        ahorroCo2Ton: r.ahorroCo2,
+        arboles: r.arboles,
+        costoSolucionCop: r.costoSolucion,
+        costoVatioCop: r.costoVatio * inp.trm,
+        ahorroMensualCop: r.ahorroMensualCop,
+        ahorro30AniosCop: r.ahorro30Anios,
+        retornoMeses: r.retornoMeses,
+        retornoAnios: r.retornoAnios,
+        tirPct: r.tir,
+        flujoAnual: r.flujoAnual,
+      });
+    } catch (err) {
+      console.error('Error generating proposal PDF:', err);
+      alert('Ocurrió un error al generar el PDF. Por favor verifique los datos e intente nuevamente.');
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  };
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -70,6 +114,26 @@ export function Cotizador2Calculator() {
       <div className="lg:col-span-5 space-y-6">
         <Card title="Datos del cliente">
           <div className="grid grid-cols-2 gap-3">
+            <div className="col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
+              <Field label="Nombre del Proyecto">
+                <input
+                  type="text"
+                  className={field}
+                  value={projectName}
+                  placeholder="Ej: Finca Bolombolo"
+                  onChange={(e) => setProjectName(e.target.value)}
+                />
+              </Field>
+              <Field label="Nombre del Cliente">
+                <input
+                  type="text"
+                  className={field}
+                  value={clientName}
+                  placeholder="Ej: Propietario / Empresa"
+                  onChange={(e) => setClientName(e.target.value)}
+                />
+              </Field>
+            </div>
             <NumberField label="TRM del día" value={inp.trm} onChange={(v) => set({ trm: v })} />
             <NumberField label="Consumo promedio (kWh/mes)" value={inp.consumoKwh} onChange={(v) => set({ consumoKwh: v })} />
             <NumberField label="Costo del kWh (COP)" value={inp.costoKwhBase} step={0.01} onChange={(v) => set({ costoKwhBase: v })} />
@@ -141,6 +205,32 @@ export function Cotizador2Calculator() {
             )}
           </div>
         </Card>
+
+        {/* Botón de Generar PDF de Cotización solicitado al terminar los datos de entrada */}
+        <div className="pt-2">
+          <button
+            type="button"
+            id="btn-generar-pdf-cotizacion"
+            onClick={handleGeneratePdf}
+            disabled={isGeneratingPdf}
+            className="w-full flex items-center justify-center gap-3 py-4 px-6 rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:from-emerald-600 hover:to-teal-600 text-white font-extrabold shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40 transition-all transform hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-70 disabled:cursor-not-allowed cursor-pointer text-base"
+          >
+            {isGeneratingPdf ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span>Generando PDF Oficial (8 Páginas)...</span>
+              </>
+            ) : (
+              <>
+                <FileDown className="w-5 h-5" />
+                <span>Generar PDF de Cotización</span>
+              </>
+            )}
+          </button>
+          <p className="text-center text-xs text-slate-500 dark:text-slate-400 mt-2 font-medium">
+            Estructura idéntica a <span className="font-semibold text-emerald-600 dark:text-emerald-400">Cotización Bolombolo</span> · 8 páginas landscape · Ticline S.A.S.
+          </p>
+        </div>
       </div>
 
       {/* Resultados */}
@@ -191,6 +281,26 @@ export function Cotizador2Calculator() {
             <Row label="Ahorro en 30 años" value={cop(r.ahorro30Anios)} />
             <Row label="Retorno" value={`${nf(r.retornoMeses)} meses (${nf(r.retornoAnios)} años)`} />
             <Row label="TIR" value={Number.isFinite(r.tir) ? pct(r.tir) : 'N/D'} strong />
+            <div className="pt-3 border-t border-slate-100 dark:border-slate-800 mt-2">
+              <button
+                type="button"
+                onClick={handleGeneratePdf}
+                disabled={isGeneratingPdf}
+                className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 font-bold text-xs transition-colors cursor-pointer"
+              >
+                {isGeneratingPdf ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Descargando...</span>
+                  </>
+                ) : (
+                  <>
+                    <FileDown className="w-4 h-4" />
+                    <span>Descargar PDF Cotización Oficial</span>
+                  </>
+                )}
+              </button>
+            </div>
           </Card>
         </div>
       </div>

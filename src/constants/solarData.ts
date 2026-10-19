@@ -182,11 +182,4 @@ export const SECTORS = [
     icon: 'Building2',
     typicalSavings: '80% - 92%',
   },
-  {
-    id: 'industrial',
-    name: 'Industrial',
-    description: 'Fábricas, bodegas y plantas de producción.',
-    icon: 'Factory',
-    typicalSavings: '75% - 90%',
-  },
 ];

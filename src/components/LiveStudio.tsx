@@ -44,7 +44,7 @@ export const LiveStudio: React.FC<LiveStudioProps> = ({
           <label className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
             Sector / Tarifa
           </label>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 gap-2">
             {SECTORS.map((s) => (
               <button
                 key={s.id}
