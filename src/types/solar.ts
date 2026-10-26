@@ -128,7 +128,7 @@ export interface SolarCalculationResults {
   annualConsumptionKwh: number; // E_consumoAnual = ConsumoMensual * 12
   exactPanelCount: number;      // NroPaneles antes del redondeo
   systemEfficiency: number;     // Eficiencia del sistema (0.80 = 80%)
-  
+
   // NASA POWER specific engineering outputs
   effectiveHspUsed: number;
   effectivePr: number;
@@ -137,7 +137,7 @@ export interface SolarCalculationResults {
   worstMonthHsp: number;
   bestMonthHsp: number;
   monthlyDetails: MonthGenerationDetail[];
-  
+
   // Financials
   effectiveTariffPerKwh: number;
   monthlyCurrentBill: number;
@@ -145,7 +145,7 @@ export interface SolarCalculationResults {
   newEstimatedMonthlyBill: number;
   savingsPercentage: number;
   annualSavingsAmount: number;
-  
+
   estimatedGrossCost: number;
   ivaAmount: number;
   netInvestmentCost: number;

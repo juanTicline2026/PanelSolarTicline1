@@ -3,12 +3,10 @@ import { ArrowRight, Zap, ShieldCheck, TrendingDown, Sun } from 'lucide-react';
 
 interface HeroSectionProps {
   onStartCalculator: () => void;
-  onExploreStudio: () => void;
 }
 
 export const HeroSection: React.FC<HeroSectionProps> = ({
   onStartCalculator,
-  onExploreStudio,
 }) => {
   return (
     <section className="relative overflow-hidden pt-8 pb-12 lg:pt-14 lg:pb-16 border-b border-slate-200/80 dark:border-slate-800/80 bg-gradient-to-b from-slate-50 via-white to-slate-100 dark:from-slate-950 dark:via-slate-900/60 dark:to-slate-950">
@@ -25,7 +23,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
             
             <div className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
               <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-              Ingeniería Fotovoltaica · Satélite NASA POWER (Langley Research Center)
+              Ingeniería Fotovoltaica · Fórmulas Oficiales Cotizador2 & Radiación Departamental
             </div>
 
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight font-display text-slate-900 dark:text-white leading-[1.15]" style={{ textWrap: 'balance' }}>
@@ -33,7 +31,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
             </h1>
 
             <p className="text-base sm:text-lg text-slate-600 dark:text-slate-300 leading-relaxed max-w-2xl">
-              Dimensiona tu sistema fotovoltaico en <strong>kWp</strong>, estima el número de paneles, tu ahorro mensual y el retorno de inversión con radiación satelital oficial de <strong>NASA POWER</strong>.
+              Dimensiona tu sistema fotovoltaico en <strong>kWp</strong>, estima el número de paneles, tu ahorro mensual y el retorno de inversión con las fórmulas exactas del modelo de ingeniería y tarifas residencial/comercial.
             </p>
 
             {/* Micro value proofs */}
@@ -60,14 +58,6 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
               >
                 <span>Calcular Mi Proyecto Ahora</span>
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-              </button>
-
-              <button
-                onClick={onExploreStudio}
-                className="px-5 py-3.5 text-sm sm:text-base font-semibold rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800/80 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700/80 hover:scale-105 transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer"
-              >
-                <Zap className="w-4 h-4 text-amber-500" />
-                <span>Simulador en Tiempo Real</span>
               </button>
             </div>
 

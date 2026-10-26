@@ -5,6 +5,7 @@ export interface ProposalPdfData {
   projectCode?: string;
   date?: string;
   clientName?: string;
+  city?: string;
   department?: string;
   trm?: number;
   consumoKwh: number;
@@ -60,10 +61,17 @@ export async function generateProposalPdf(data: ProposalPdfData): Promise<void> 
 
   // Dynamic variables formatted to match original document
   const clientName = data.clientName?.trim() || 'Propietario Finca Bolombolo';
-  const projectName = data.projectName?.trim() || 'Finca Bolombolo';
+  const projectName = data.projectName?.trim() || 'Proyecto Solar';
   const projectCode = data.projectCode || 'C5752026';
   const dateFormatted = data.date || new Intl.DateTimeFormat('es-CO', { month: 'long', day: '2-digit', year: 'numeric' }).format(new Date());
   const dateCapitalized = dateFormatted.charAt(0).toUpperCase() + dateFormatted.slice(1);
+
+  // Ubicación / Ciudad seleccionada en el cotizador
+  const locationCity = data.city?.trim() || (data.department?.includes(',') ? data.department.split(',')[0].trim() : data.department?.trim()) || 'Medellín';
+  const locationDept = data.department?.includes(',') ? data.department.split(',')[1].trim() : (data.city && data.department && data.city !== data.department ? data.department.trim() : 'Antioquia');
+  const fullLocation = locationCity && locationDept && locationCity !== locationDept
+    ? `${locationCity}, ${locationDept}`
+    : (locationCity || locationDept || 'Colombia');
 
   const kwp = data.kwp || Number(((data.panelCount * data.potenciaPanel) / 1000).toFixed(3));
   const paneles = data.panelCount || 10;
@@ -142,18 +150,24 @@ export async function generateProposalPdf(data: ProposalPdfData): Promise<void> 
     doc.addImage(img13, 'JPEG', 16, 55, 102, 34);
   }
 
-  // Client and Project Name subtitle inside box
+  // Client, Project Name and Location inside box
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(13);
   doc.setTextColor(38, 52, 137); // #263489
-  doc.text(projectName, 67, 105, { align: 'center' });
+  doc.text(projectName, 67, 102, { align: 'center' });
 
   if (clientName && clientName !== projectName) {
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9.5);
     doc.setTextColor(75, 85, 99);
-    doc.text(`Cliente: ${clientName}`, 67, 112, { align: 'center' });
+    doc.text(`Cliente: ${clientName}`, 67, 109, { align: 'center' });
   }
+
+  // Ciudad / Departamento seleccionados
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9.5);
+  doc.setTextColor(16, 149, 107); // Verde #10956B
+  doc.text(`Ciudad: ${fullLocation}`, 67, 116, { align: 'center' });
 
   // Modalidad EPC at bottom right of the box
   doc.setFont('helvetica', 'bolditalic');
@@ -228,21 +242,26 @@ export async function generateProposalPdf(data: ProposalPdfData): Promise<void> 
   doc.setFillColor(255, 255, 255);
   doc.rect(0, 0, pageWidth, pageHeight, 'F');
 
-  // Top Section: Project Name & Date
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(14);
-  doc.setTextColor(56, 73, 84);
-  doc.text(`Proyecto ${projectCode}`, 16, 42);
-
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(18);
-  doc.setTextColor(28, 28, 26);
-  doc.text(projectName, 16, 52);
-
+  // Top Section: Project Name, Location & Date
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(13);
   doc.setTextColor(56, 73, 84);
-  doc.text(`${dateCapitalized}.v1`, 16, 62);
+  doc.text(`Proyecto ${projectCode}`, 16, 40);
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(17);
+  doc.setTextColor(28, 28, 26);
+  doc.text(projectName, 16, 49);
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(11);
+  doc.setTextColor(38, 52, 137);
+  doc.text(`Ubicación: ${fullLocation}`, 16, 58);
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(11);
+  doc.setTextColor(56, 73, 84);
+  doc.text(`${dateCapitalized}.v1`, 16, 66);
 
   if (img25) {
     doc.addImage(img25, 'JPEG', pageWidth - 55, 36, 44, 16);
@@ -281,13 +300,29 @@ export async function generateProposalPdf(data: ProposalPdfData): Promise<void> 
   doc.text(specLines, 14, 69, { lineHeightFactor: 1.35 });
 
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(10);
+  doc.setFontSize(9.5);
   doc.setTextColor(28, 28, 26);
-  doc.text(`Consumo Actual:`, 14, 118);
+  doc.text(`Ubicación del Proyecto:`, 14, 96);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(11);
   doc.setTextColor(38, 52, 137);
-  doc.text(`${nf(consumoKwh)} kWh/mes`, 14, 126);
+  doc.text(fullLocation, 14, 103);
+
+  if (data.radiacion) {
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8.5);
+    doc.setTextColor(75, 85, 99);
+    doc.text(`Radiación Solar: ${data.radiacion.toFixed(2)} HSP`, 14, 110);
+  }
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9.5);
+  doc.setTextColor(28, 28, 26);
+  doc.text(`Consumo Actual:`, 14, 120);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(11);
+  doc.setTextColor(38, 52, 137);
+  doc.text(`${nf(consumoKwh)} kWh/mes`, 14, 127);
 
   // Right Area: The Exact Card Grid from user screenshot
   const gridStartX = 92;
@@ -698,7 +733,8 @@ export async function generateProposalPdf(data: ProposalPdfData): Promise<void> 
     doc.addImage(img54, 'JPEG', pageWidth - 55, bannerY + 12, 44, 18);
   }
 
-  // Clean filename with project/client name
-  const safeTitle = (clientName || projectName || 'Cotizacion').replace(/[^a-zA-Z0-9_-]/g, '_');
-  doc.save(`Cotizacion_${safeTitle}_Ticline.pdf`);
+  // Clean filename with project/client name and selected city
+  const safeTitle = (projectName || clientName || 'Cotizacion').replace(/[^a-zA-Z0-9_-]/g, '_');
+  const safeCity = locationCity.replace(/[^a-zA-Z0-9_-]/g, '_');
+  doc.save(`Cotizacion_${safeTitle}_${safeCity}_Ticline.pdf`);
 }

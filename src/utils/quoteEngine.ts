@@ -91,6 +91,28 @@ export function calculateQuoteCop(input: QuoteCopInput): QuoteCopResult {
   const panel = PANEL_CATALOG.find((p) => p.wattage === input.panelWattage) ?? PANEL_CATALOG[0];
   const n = input.panelCount;
   const kwp = (n * panel.wattage) / 1000; // C5
+
+  if (n <= 0 || kwp <= 0) {
+    return {
+      inverterReference: '-',
+      inverterCount: 0,
+      panelReference: panel.label,
+      batteryCount: 0,
+      kwp: 0,
+      lines: [],
+      installationSubtotalCost: 0,
+      installationSubtotalPrice: 0,
+      preliminarySubtotal: 0,
+      upmeCertificate: 0,
+      liabilityInsurance: 0,
+      salesCommission: 0,
+      subtotal: 0,
+      iva: 0,
+      total: 0,
+      pricePerKwp: 0,
+    };
+  }
+
   const isHybrid = input.systemType === 'hybrid';
 
   // Inversor

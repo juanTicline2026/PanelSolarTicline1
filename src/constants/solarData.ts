@@ -2,32 +2,6 @@ import { CityLocation, CurrencyConfig } from '../types/solar';
 import { PANEL_CATALOG } from './quoteCatalog';
 
 export const CURRENCIES: Record<string, CurrencyConfig> = {
-  USD: {
-    code: 'USD',
-    symbol: '$',
-    name: 'USD - Dólar Estadounidense',
-    toUsdRate: 1,
-    formatDecimals: 0,
-    defaultBillAmount: 250,
-    defaultRatesPerKwh: {
-      residencial: 0.18,
-      comercial: 0.22,
-      industrial: 0.15,
-    },
-  },
-  MXN: {
-    code: 'MXN',
-    symbol: '$',
-    name: 'MXN - Peso Mexicano',
-    toUsdRate: 18.5,
-    formatDecimals: 0,
-    defaultBillAmount: 3800,
-    defaultRatesPerKwh: {
-      residencial: 3.5,
-      comercial: 4.2,
-      industrial: 2.9,
-    },
-  },
   COP: {
     code: 'COP',
     symbol: '$',
@@ -41,43 +15,17 @@ export const CURRENCIES: Record<string, CurrencyConfig> = {
       industrial: 750,
     },
   },
-  EUR: {
-    code: 'EUR',
-    symbol: '€',
-    name: 'EUR - Euro',
-    toUsdRate: 0.92,
-    formatDecimals: 0,
-    defaultBillAmount: 180,
-    defaultRatesPerKwh: {
-      residencial: 0.24,
-      comercial: 0.28,
-      industrial: 0.19,
-    },
-  },
-  CLP: {
-    code: 'CLP',
+  USD: {
+    code: 'USD',
     symbol: '$',
-    name: 'CLP - Peso Chileno',
-    toUsdRate: 940,
+    name: 'USD - Dólar Estadounidense',
+    toUsdRate: 1,
     formatDecimals: 0,
-    defaultBillAmount: 140000,
+    defaultBillAmount: 250,
     defaultRatesPerKwh: {
-      residencial: 160,
-      comercial: 195,
-      industrial: 135,
-    },
-  },
-  PEN: {
-    code: 'PEN',
-    symbol: 'S/',
-    name: 'PEN - Sol Peruano',
-    toUsdRate: 3.75,
-    formatDecimals: 0,
-    defaultBillAmount: 480,
-    defaultRatesPerKwh: {
-      residencial: 0.72,
-      comercial: 0.85,
-      industrial: 0.58,
+      residencial: 0.18,
+      comercial: 0.22,
+      industrial: 0.15,
     },
   },
 };

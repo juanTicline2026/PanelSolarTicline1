@@ -1,7 +1,9 @@
-import React from 'react';
-import { Zap, Sun, DollarSign, Clock, ShieldCheck, ArrowRight, Download, CheckCircle, Award } from 'lucide-react';
+import React, { useState } from 'react';
+import { Zap, Sun, DollarSign, Clock, ShieldCheck, ArrowRight, Download, CheckCircle, Award, FileDown, Loader2 } from 'lucide-react';
 import { SolarCalculationResults, SolarInputs } from '../types/solar';
 import { formatCurrencyValue } from '../utils/solarCalculator';
+import { generateProposalPdf } from '../utils/pdfGenerator';
+import { CITIES } from '../constants/solarData';
 
 interface ResultsDashboardProps {
   results: SolarCalculationResults;
@@ -16,18 +18,55 @@ export const ResultsDashboard: React.FC<ResultsDashboardProps> = ({
   onOpenQuoteModal,
   onResetOrEdit,
 }) => {
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const cityName = CITIES.find((c) => c.id === inputs.cityId)?.name || 'Antioquia';
+
+  const handleDownloadPdf = async () => {
+    try {
+      setIsGeneratingPdf(true);
+      await generateProposalPdf({
+        projectName: 'Proyecto Solar Residencial',
+        clientName: 'Cliente Solar',
+        department: cityName,
+        consumoKwh: results.monthlyConsumptionKwh,
+        costoKwhBase: results.effectiveTariffPerKwh,
+        radiacion: results.effectiveHspUsed,
+        potenciaPanel: results.panelWattage,
+        panelCount: results.panelCount,
+        kwp: results.actualInstalledKwp,
+        areaRequeridaM2: results.roofAreaRequiredM2,
+        produccionMensualKwh: results.monthlyGenerationKwh,
+        produccionAnualKwh: results.annualGenerationKwh,
+        ahorroPct: results.savingsPercentage,
+        ahorroCo2Ton: results.annualCo2TonsAvoided,
+        arboles: results.treesEquivalentCount,
+        costoSolucionCop: results.netInvestmentCost,
+        ahorroMensualCop: results.monthlySavingsAmount,
+        ahorro30AniosCop: results.cumulative30YearSavings,
+        retornoMeses: Math.round(results.paybackYears * 12),
+        retornoAnios: results.paybackYears,
+        tirPct: results.estimatedRoiPercentage,
+      });
+    } catch (err) {
+      console.error('Error generating PDF:', err);
+      alert('Ocurrió un error al generar el PDF de cotización.');
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  };
+
   return (
     <div className="space-y-6 animate-fadeIn">
-      
+
       {/* Top Banner with Major Metrics */}
       <div className="rounded-3xl border border-emerald-500/30 bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900 p-6 sm:p-8 text-white shadow-2xl relative overflow-hidden">
-        
+
         {/* Glow ambient background */}
         <div className="absolute top-0 right-0 w-80 h-80 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute bottom-0 left-0 w-80 h-80 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
 
         <div className="relative z-10 space-y-6">
-          
+
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-5">
             <div>
               <div className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-emerald-400">
@@ -38,7 +77,7 @@ export const ResultsDashboard: React.FC<ResultsDashboardProps> = ({
                 Tu Sistema Óptimo: {results.actualInstalledKwp} kWp
               </h2>
             </div>
-            
+
             <div className="flex items-center gap-2">
               <button
                 type="button"
@@ -52,7 +91,7 @@ export const ResultsDashboard: React.FC<ResultsDashboardProps> = ({
 
           {/* 4 Main Output Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            
+
             {/* Output 1: System Size & Panels */}
             <div className="p-5 rounded-2xl bg-slate-800/60 border border-slate-700/80 flex flex-col justify-between group hover:border-emerald-500/50 transition-all">
               <span className="text-xs text-slate-400 font-medium">Capacidad & Módulos</span>
@@ -166,20 +205,41 @@ export const ResultsDashboard: React.FC<ResultsDashboardProps> = ({
           </div>
 
           {/* Action Row */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 pt-2">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 pt-3 border-t border-slate-800/80">
             <div className="flex items-center gap-2 text-xs text-slate-400">
               <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
-              <span>Incluye ingeniería de detalle, trámites ante la empresa de energía y montaje profesional.</span>
+              <span>Incluye ingeniería de detalle, trámites ante operador de red y montaje profesional.</span>
             </div>
 
-            <button
-              type="button"
-              onClick={onOpenQuoteModal}
-              className="px-6 py-3.5 rounded-xl text-sm font-extrabold text-slate-950 bg-gradient-to-r from-emerald-400 via-teal-300 to-amber-300 hover:from-emerald-300 hover:to-amber-200 shadow-xl shadow-emerald-500/25 hover:scale-105 active:scale-95 transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer"
-            >
-              <Download className="w-4 h-4 text-slate-950" />
-              <span>Descargar Propuesta Técnica & Cotizar</span>
-            </button>
+            <div className="flex flex-col sm:flex-row items-center gap-2.5">
+              <button
+                type="button"
+                id="btn-generar-pdf-results"
+                onClick={handleDownloadPdf}
+                disabled={isGeneratingPdf}
+                className="w-full sm:w-auto px-5 py-3 rounded-xl text-xs sm:text-sm font-extrabold text-white bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:from-emerald-600 hover:to-teal-600 shadow-md shadow-emerald-500/25 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-70"
+              >
+                {isGeneratingPdf ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Generando PDF Oficial (8 Págs)...</span>
+                  </>
+                ) : (
+                  <>
+                    <FileDown className="w-4 h-4" />
+                    <span>Generar PDF de Cotización</span>
+                  </>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={onOpenQuoteModal}
+                className="w-full sm:w-auto px-5 py-3 rounded-xl text-xs sm:text-sm font-bold text-slate-900 bg-emerald-400 hover:bg-emerald-300 shadow-md shadow-emerald-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <span>Solicitar Cotización Formal</span>
+              </button>
+            </div>
           </div>
 
         </div>
@@ -192,7 +252,7 @@ export const ResultsDashboard: React.FC<ResultsDashboardProps> = ({
           <ShieldCheck className="w-5 h-5 text-emerald-500" />
           Componentes Incluidos en la Propuesta "Llave en Mano"
         </h3>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs sm:text-sm">
           <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 flex items-start gap-3">
             <div className="w-7 h-7 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 font-bold">1</div>

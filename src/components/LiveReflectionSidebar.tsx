@@ -8,6 +8,7 @@ import { CITIES } from '../constants/solarData';
 interface LiveReflectionSidebarProps {
   results: SolarCalculationResults;
   inputs: SolarInputs;
+  currentStep?: number;
   onOpenQuoteModal: () => void;
   onJumpToResults: () => void;
 }
@@ -15,6 +16,7 @@ interface LiveReflectionSidebarProps {
 export const LiveReflectionSidebar: React.FC<LiveReflectionSidebarProps> = ({
   results,
   inputs,
+  currentStep,
   onOpenQuoteModal,
   onJumpToResults,
 }) => {
@@ -60,8 +62,8 @@ export const LiveReflectionSidebar: React.FC<LiveReflectionSidebarProps> = ({
   };
 
   return (
-    <div className="sticky top-20 rounded-3xl border border-emerald-500/30 bg-gradient-to-b from-slate-900 via-slate-950 to-slate-950 p-5 sm:p-6 text-white shadow-2xl space-y-5 overflow-hidden relative animate-fadeIn">
-      
+    <div className="sticky top-20 rounded-3xl border border-emerald-500/30 bg-gradient-to-b from-slate-900 via-slate-950 to-slate-950 p-5 sm:p-6 text-white shadow-2xl space-y-5 overflow-y-auto max-h-[calc(100vh-6rem)] relative animate-fadeIn">
+
       {/* Ambient background glow */}
       <div className="absolute top-0 right-0 w-48 h-48 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none" />
       <div className="absolute bottom-0 left-0 w-48 h-48 bg-amber-500/10 rounded-full blur-2xl pointer-events-none" />
@@ -247,45 +249,57 @@ export const LiveReflectionSidebar: React.FC<LiveReflectionSidebarProps> = ({
           </span>
         </div>
 
-        {/* Action Buttons */}
-        <div className="space-y-2 pt-1">
-          <button
-            type="button"
-            id="btn-generar-pdf-sidebar"
-            onClick={handleDownloadPdf}
-            disabled={isGeneratingPdf}
-            className="w-full py-3 px-3 rounded-xl text-xs sm:text-sm font-extrabold text-white bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:from-emerald-600 hover:to-teal-600 shadow-md shadow-emerald-500/25 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-70"
-          >
-            {isGeneratingPdf ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                <span>Generando PDF Oficial (8 Págs)...</span>
-              </>
-            ) : (
-              <>
-                <FileDown className="w-4 h-4" />
-                <span>Generar PDF de Cotización</span>
-              </>
-            )}
-          </button>
+        {/* Action Buttons - Only visible when reaching step 4 (Resultados) */}
+        {(!currentStep || currentStep >= 4) ? (
+          <div className="space-y-2 pt-3 pb-1 sticky bottom-0 z-20 bg-slate-950/95 backdrop-blur-sm">
+            <button
+              type="button"
+              id="btn-generar-pdf-sidebar"
+              onClick={handleDownloadPdf}
+              disabled={isGeneratingPdf}
+              className="w-full py-3 px-3 rounded-xl text-xs sm:text-sm font-extrabold text-white bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:from-emerald-600 hover:to-teal-600 shadow-md shadow-emerald-500/25 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-70"
+            >
+              {isGeneratingPdf ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Generando PDF Oficial (8 Págs)...</span>
+                </>
+              ) : (
+                <>
+                  <FileDown className="w-4 h-4" />
+                  <span>Generar PDF de Cotización</span>
+                </>
+              )}
+            </button>
 
-          <button
-            type="button"
-            onClick={onJumpToResults}
-            className="w-full py-2.5 px-3 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-200 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
-          >
-            <span>Ver Resultados & Desglose Completo</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </button>
+            <button
+              type="button"
+              onClick={onJumpToResults}
+              className="w-full py-2.5 px-3 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-200 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+            >
+              <span>Ver Resultados & Desglose Completo</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
 
-          <button
-            type="button"
-            onClick={onOpenQuoteModal}
-            className="w-full py-2.5 px-3 rounded-xl text-xs font-bold text-slate-900 bg-emerald-400 hover:bg-emerald-300 transition-all flex items-center justify-center gap-2 cursor-pointer"
-          >
-            <span>Solicitar Cotización Formal</span>
-          </button>
-        </div>
+            <button
+              type="button"
+              onClick={onOpenQuoteModal}
+              className="w-full py-2.5 px-3 rounded-xl text-xs font-bold text-slate-900 bg-emerald-400 hover:bg-emerald-300 transition-all flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <span>Solicitar Cotización Formal</span>
+            </button>
+          </div>
+        ) : (
+          <div className="p-3.5 rounded-2xl bg-slate-800/50 border border-slate-700/60 text-center space-y-1">
+            <div className="flex items-center justify-center gap-1.5 text-xs font-semibold text-emerald-400">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span>Paso {currentStep} de 3 en progreso</span>
+            </div>
+            <p className="text-[11px] text-slate-400">
+              Completa los pasos hasta el paso 4 (<strong className="text-white font-medium">Resultados</strong>) para generar el PDF de cotización y solicitar cotización formal.
+            </p>
+          </div>
+        )}
 
       </div>
 

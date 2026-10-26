@@ -22,10 +22,10 @@ export const LiveStudio: React.FC<LiveStudioProps> = ({
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start animate-fadeIn">
-      
+
       {/* Left Column: Interactive Controls Console */}
       <div className="lg:col-span-5 rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/90 p-6 shadow-xl space-y-6">
-        
+
         <div className="border-b border-slate-200 dark:border-slate-800 pb-4">
           <div className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-amber-500">
             <Sliders className="w-3.5 h-3.5" />
@@ -50,11 +50,10 @@ export const LiveStudio: React.FC<LiveStudioProps> = ({
                 key={s.id}
                 type="button"
                 onClick={() => onChange({ sector: s.id as SectorType })}
-                className={`py-2 px-3 rounded-xl text-xs font-bold transition-all ${
-                  inputs.sector === s.id
+                className={`py-2 px-3 rounded-xl text-xs font-bold transition-all ${inputs.sector === s.id
                     ? 'bg-emerald-500 text-white shadow-sm'
                     : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                }`}
+                  }`}
               >
                 {s.name}
               </button>
@@ -62,30 +61,30 @@ export const LiveStudio: React.FC<LiveStudioProps> = ({
           </div>
         </div>
 
-        {/* 2. Bill Amount / kWh Slider */}
+        {/* 2. Monthly kWh Slider */}
         <div className="space-y-3 p-4 rounded-2xl bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-              <DollarSign className="w-3.5 h-3.5 text-emerald-500" />
-              Factura Mensual
+              <Zap className="w-3.5 h-3.5 text-emerald-500" />
+              Consumo Mensual
             </div>
             <span className="text-base sm:text-lg font-black font-display text-emerald-500 tabular-nums">
-              {formatCurrencyValue(inputs.billAmount, inputs.currencyCode)}
+              {inputs.monthlyKwh || 0} kWh/mes
             </span>
           </div>
 
           <input
             type="range"
-            min={isHighValue ? 50000 : 20}
-            max={isHighValue ? 5000000 : 3500}
-            step={isHighValue ? 25000 : 25}
-            value={inputs.billAmount}
-            onChange={(e) => onChange({ billAmount: Number(e.target.value) })}
+            min={50}
+            max={5000}
+            step={25}
+            value={inputs.monthlyKwh || 0}
+            onChange={(e) => onChange({ monthlyKwh: Number(e.target.value) })}
             className="w-full h-2 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer"
           />
 
           <div className="flex justify-between text-[11px] text-slate-400">
-            <span>Consumo equivalente: <strong className="text-slate-700 dark:text-slate-300 tabular-nums">{results.monthlyConsumptionKwh} kWh/mes</strong></span>
+            <span>Costo estimado: <strong className="text-slate-700 dark:text-slate-300 tabular-nums">{formatCurrencyValue(results.monthlyCurrentBill, inputs.currencyCode)}/mes</strong></span>
             <span>Tarifa: {currency.symbol} {currency.defaultRatesPerKwh[inputs.sector]}/kWh</span>
           </div>
         </div>
@@ -130,33 +129,30 @@ export const LiveStudio: React.FC<LiveStudioProps> = ({
             <button
               type="button"
               onClick={() => onChange({ sizingBasis: 'annual' })}
-              className={`py-1 px-1.5 text-[10px] font-bold rounded-lg transition-all ${
-                inputs.sizingBasis === 'annual'
+              className={`py-1 px-1.5 text-[10px] font-bold rounded-lg transition-all ${inputs.sizingBasis === 'annual'
                   ? 'bg-emerald-500 text-white'
                   : 'bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-900 dark:hover:text-white'
-              }`}
+                }`}
             >
               Promedio Anual
             </button>
             <button
               type="button"
               onClick={() => onChange({ sizingBasis: 'worst_month' })}
-              className={`py-1 px-1.5 text-[10px] font-bold rounded-lg transition-all ${
-                inputs.sizingBasis === 'worst_month'
+              className={`py-1 px-1.5 text-[10px] font-bold rounded-lg transition-all ${inputs.sizingBasis === 'worst_month'
                   ? 'bg-amber-500 text-slate-950'
                   : 'bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-900 dark:hover:text-white'
-              }`}
+                }`}
             >
               Mes Crítico
             </button>
             <button
               type="button"
               onClick={() => onChange({ sizingBasis: 'best_month' })}
-              className={`py-1 px-1.5 text-[10px] font-bold rounded-lg transition-all ${
-                inputs.sizingBasis === 'best_month'
+              className={`py-1 px-1.5 text-[10px] font-bold rounded-lg transition-all ${inputs.sizingBasis === 'best_month'
                   ? 'bg-blue-500 text-white'
                   : 'bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-900 dark:hover:text-white'
-              }`}
+                }`}
             >
               Mes Pico
             </button>
@@ -195,11 +191,10 @@ export const LiveStudio: React.FC<LiveStudioProps> = ({
                 key={sys.id}
                 type="button"
                 onClick={() => onChange({ systemType: sys.id as SystemType })}
-                className={`py-2 px-3 rounded-xl text-xs font-bold transition-all text-center ${
-                  inputs.systemType === sys.id
+                className={`py-2 px-3 rounded-xl text-xs font-bold transition-all text-center ${inputs.systemType === sys.id
                     ? 'bg-emerald-500 text-white shadow-sm'
                     : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                }`}
+                  }`}
               >
                 {sys.id === 'on_grid' ? 'On-Grid (Red)' : 'Híbrido + Batería'}
               </button>
@@ -218,11 +213,10 @@ export const LiveStudio: React.FC<LiveStudioProps> = ({
                 key={p.wattage}
                 type="button"
                 onClick={() => onChange({ panelWattage: p.wattage })}
-                className={`py-2 px-2.5 rounded-xl text-xs font-bold transition-all text-center ${
-                  inputs.panelWattage === p.wattage
+                className={`py-2 px-2.5 rounded-xl text-xs font-bold transition-all text-center ${inputs.panelWattage === p.wattage
                     ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-sm'
                     : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
-                }`}
+                  }`}
               >
                 {p.wattage}W
               </button>
@@ -234,7 +228,7 @@ export const LiveStudio: React.FC<LiveStudioProps> = ({
 
       {/* Right Column: Live Dynamic Executive Cockpit */}
       <div className="lg:col-span-7 space-y-6">
-        
+
         {/* Dynamic Big Numbers */}
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3.5">
           <div className="p-5 rounded-2xl bg-gradient-to-br from-emerald-500/10 to-teal-500/5 border border-emerald-500/30">

@@ -24,10 +24,10 @@ export function calculateSolarSystem(inputs: SolarInputs): SolarCalculationResul
   let monthlyCurrentBill = 0;
 
   if (inputs.calculationMode === 'bill') {
-    monthlyCurrentBill = Math.max(10, inputs.billAmount);
-    monthlyConsumptionKwh = monthlyCurrentBill / effectiveTariff;
+    monthlyCurrentBill = Math.max(0, inputs.billAmount || 0);
+    monthlyConsumptionKwh = monthlyCurrentBill > 0 ? monthlyCurrentBill / effectiveTariff : 0;
   } else {
-    monthlyConsumptionKwh = Math.max(20, inputs.monthlyKwh);
+    monthlyConsumptionKwh = Math.max(0, inputs.monthlyKwh || 0);
     monthlyCurrentBill = monthlyConsumptionKwh * effectiveTariff;
   }
 
@@ -69,11 +69,13 @@ export function calculateSolarSystem(inputs: SolarInputs): SolarCalculationResul
 
   const panelWattageKw = inputs.panelWattage / 1000; // PotPanel en kWp
   // NroPaneles exacto según la fórmula
-  const exactPanelCount = annualTargetKwh / (panelWattageKw * DAYS_PER_YEAR * effectiveHsp * effectivePr);
+  const exactPanelCount = monthlyConsumptionKwh > 0 && effectiveHsp > 0
+    ? annualTargetKwh / (panelWattageKw * DAYS_PER_YEAR * effectiveHsp * effectivePr)
+    : 0;
   const recommendedKwp = Number((exactPanelCount * panelWattageKw).toFixed(2));
 
   // Número de paneles enteros y potencia instalada real
-  const panelCount = Math.max(1, Math.ceil(exactPanelCount));
+  const panelCount = exactPanelCount > 0 ? Math.ceil(exactPanelCount) : 0;
   const actualInstalledKwp = Number((panelCount * panelWattageKw).toFixed(2));
 
   // 5. Generación anual con la Fórmula Oficial Andrés:
@@ -120,7 +122,7 @@ export function calculateSolarSystem(inputs: SolarInputs): SolarCalculationResul
     monthlyCurrentBill - rawMonthlySavings
   );
   const monthlySavingsAmount = Math.max(0, monthlyCurrentBill - newEstimatedMonthlyBill);
-  const savingsPercentage = Math.round((monthlySavingsAmount / monthlyCurrentBill) * 100);
+  const savingsPercentage = monthlyCurrentBill > 0 ? Math.round((monthlySavingsAmount / monthlyCurrentBill) * 100) : 0;
   const annualSavingsAmount = monthlySavingsAmount * 12;
 
   // 8. Costo de capital (fórmulas de la hoja COTIZACIÓN del Excel, calculadas en COP)
@@ -155,15 +157,17 @@ export function calculateSolarSystem(inputs: SolarInputs): SolarCalculationResul
   const ivaAmount = quote.iva;
   const netInvestmentCost = quote.total; // Total con IVA (Excel: COTIZACIÓN!D47)
 
-  const paybackYears = Number(
-    Math.min(25, Math.max(1.5, netInvestmentCost / Math.max(1, annualSavingsAmount))).toFixed(1)
-  );
-  const estimatedRoiPercentage = Number(((annualSavingsAmount / netInvestmentCost) * 100).toFixed(1));
+  const paybackYears = netInvestmentCost > 0 && annualSavingsAmount > 0
+    ? Number(Math.min(25, Math.max(1.5, netInvestmentCost / annualSavingsAmount)).toFixed(1))
+    : 0;
+  const estimatedRoiPercentage = netInvestmentCost > 0
+    ? Number(((annualSavingsAmount / netInvestmentCost) * 100).toFixed(1))
+    : 0;
 
   // 9. 30-Year Cashflow Simulation (Exact comparison: Conventional Grid Cost vs Solar System Cost)
   const tariffInflationRate = 0.055; // 5.5% historical compounding utility inflation
   const panelDegradationRate = 0.005; // 0.5% yearly module degradation
-  
+
   // Amortization period for financing option (6 years typical green loan)
   const financingYears = 6;
   const annualLoanPayment = (netInvestmentCost / financingYears) * 1.06;
@@ -175,10 +179,10 @@ export function calculateSolarSystem(inputs: SolarInputs): SolarCalculationResul
   for (let y = 1; y <= 30; y++) {
     const tariffAtYear = effectiveTariff * Math.pow(1 + tariffInflationRate, y - 1);
     const genAtYear = annualGenerationKwh * Math.pow(1 - panelDegradationRate, y - 1);
-    
+
     // Conventional grid annual cost without solar
     const costWithoutSolarAtYear = Math.round((monthlyConsumptionKwh * 12) * tariffAtYear);
-    
+
     // Residual grid cost (power consumed when sun is down not offset or minimum fixed grid toll)
     const residualGridAnnual = Math.round(costWithoutSolarAtYear * utilityFixedFeePct);
     const oMAtYear = Math.round(annualMaintenanceBase * Math.pow(1 + 0.03, y - 1));
@@ -266,7 +270,7 @@ export function calculateSolarSystem(inputs: SolarInputs): SolarCalculationResul
 export function formatCurrencyValue(amount: number, currencyCode: string): string {
   const currency = CURRENCIES[currencyCode] || CURRENCIES.USD;
   const isHighValue = currency.toUsdRate > 50;
-  
+
   const formatted = new Intl.NumberFormat('es-ES', {
     maximumFractionDigits: isHighValue ? 0 : currency.formatDecimals,
     minimumFractionDigits: isHighValue ? 0 : currency.formatDecimals,
