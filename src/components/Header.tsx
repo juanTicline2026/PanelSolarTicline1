@@ -23,26 +23,24 @@ export const Header: React.FC<HeaderProps> = ({
     <header className="sticky top-0 z-40 w-full backdrop-blur-md border-b transition-colors duration-200 border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-950/90">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
         
-        {/* Zone 1: Single Brand Wordmark Element */}
+        {/* Zone 1: Logo Oficial Ticline (Sin relleno, letras directas) */}
         <div className="flex items-center gap-3">
-          <a href="#" className="flex items-center gap-2.5 group">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 via-amber-400 to-emerald-400 flex items-center justify-center text-slate-950 shadow-md shadow-amber-500/20 group-hover:scale-105 transition-transform">
-              <Sun className="w-5 h-5 animate-[spin_12s_linear_infinite]" />
-            </div>
-            <div className="flex flex-col">
-              <span className="text-xl font-extrabold tracking-tight font-display bg-gradient-to-r from-slate-900 via-slate-800 to-slate-950 dark:from-white dark:via-slate-100 dark:to-slate-300 bg-clip-text text-transparent">
-                SOLARIS<span className="text-amber-500 dark:text-amber-400">PRO</span>
-              </span>
-            </div>
+          <a href="#" className="flex items-center group py-1">
+            <img
+              src="/ticline-logo.png"
+              alt="TICLINE EVOLUCIÓN"
+              className="h-9 sm:h-10 w-auto object-contain dark:brightness-0 dark:invert transition-all"
+            />
           </a>
         </div>
 
-        {/* Zone 2: Navigation Links */}
-        <nav className="hidden md:flex items-center gap-4 text-sm font-semibold text-slate-600 dark:text-slate-300">
+        {/* Zone 2: Navigation Links con Tipografía Cursiva */}
+        <nav className="hidden md:flex items-center gap-4">
           <button
             type="button"
             onClick={onOpenCalculator}
-            className="hover:text-emerald-500 transition-colors cursor-pointer"
+            style={{ fontFamily: "'Dancing Script', cursive, sans-serif" }}
+            className="text-2xl font-bold italic tracking-wide text-slate-700 dark:text-slate-200 hover:text-emerald-500 dark:hover:text-emerald-400 transition-colors cursor-pointer"
           >
             Cotizador Solar
           </button>

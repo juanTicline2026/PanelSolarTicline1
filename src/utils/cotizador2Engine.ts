@@ -39,6 +39,9 @@ export const COSTO_VATIO: [number, number][] = [
 
 export const PANELES_DISPONIBLES = [610, 615, 620, 720];
 
+/** Ajuste comercial aplicado sobre la Inversión Llave en Mano (0,5%). */
+export const AJUSTE_INVERSION_PCT = 0.005;
+
 /** Tamaño (m²) de cada panel: fijado a 3.2 m² por módulo */
 export const TAMANO_PANEL_M2: Record<number, number> = {
   610: 3.2,
@@ -238,7 +241,9 @@ export interface Cotizador2Results {
   arboles: number;                   // Bases!C39
   // Cotizacion
   costoVatio: number;
-  costoSolucion: number;       // Cotizacion!F19 (COP)
+  costoSolucion: number;       // Cotizacion!F19 (COP) - valor base sin ajuste
+  ajusteInversion: number;     // Valor del ajuste del 0,5% (COP)
+  costoSolucionFinal: number;  // Inversión Llave en Mano final = base + 0,5% (COP)
   ahorroMensualCop: number;    // 'Modelo Financiero Año'!B6
   ahorro30Anios: number;       // Cotizacion!F26
   retornoMeses: number;        // Cotizacion!F28
@@ -323,6 +328,9 @@ export function calculateCotizador2(i: Partial<Cotizador2Inputs> | Cotizador2For
     costoVatio = 0;
   }
   const costoSolucion = wpActivos > 0 && trm > 0 ? costoVatio * wpActivos * trm : 0;
+  // Ajuste comercial del 0,5% sobre la inversión final (se muestra con y sin ajuste)
+  const ajusteInversion = costoSolucion * AJUSTE_INVERSION_PCT;
+  const costoSolucionFinal = costoSolucion + ajusteInversion;
 
   // ================= Modelo Financiero Año =================
   const B1 = costoSolucion;
@@ -434,6 +442,8 @@ export function calculateCotizador2(i: Partial<Cotizador2Inputs> | Cotizador2For
     arboles,
     costoVatio,
     costoSolucion,
+    ajusteInversion,
+    costoSolucionFinal,
     ahorroMensualCop: B6,
     ahorro30Anios,
     retornoMeses,

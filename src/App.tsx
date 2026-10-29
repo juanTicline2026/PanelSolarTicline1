@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { Header } from './components/Header';
 import { HeroSection } from './components/HeroSection';
 import { Cotizador2Calculator } from './components/Cotizador2Calculator';
-import { Sun } from 'lucide-react';
 
 export default function App() {
   const [darkMode, setDarkMode] = useState<boolean>(() => true);
@@ -98,34 +97,14 @@ export default function App() {
         </main>
       )}
 
-      {/* Quiet High-Grade Footer */}
-      <footer className="border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 py-12 text-slate-500 dark:text-slate-400 text-xs mt-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-lg bg-amber-500/20 text-amber-500 flex items-center justify-center font-bold">
-              <Sun className="w-4 h-4" />
-            </div>
-            <span className="font-bold text-sm tracking-tight font-display text-slate-900 dark:text-white">
-              SOLARIS<span className="text-amber-500">PRO</span>
-            </span>
-            <span className="text-slate-400 ml-2">© 2026 Calculadora de Energía Solar · Un Futuro Renovable · Ticline S.A.S.</span>
-          </div>
-
-          <div className="flex items-center gap-6">
-            <button
-              type="button"
-              onClick={handleStartCalculator}
-              className="hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
-            >
-              Cotizador
-            </button>
-            <button
-              onClick={handleOpenQuote}
-              className="text-emerald-500 hover:text-emerald-400 font-semibold cursor-pointer"
-            >
-              Generar Cotización PDF
-            </button>
-          </div>
+      {/* Footer con Logo Oficial Ticline (Sin relleno, letras directas) */}
+      <footer className="border-t border-slate-200 dark:border-slate-800 bg-transparent py-8 text-xs mt-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-center">
+          <img
+            src="/ticline-logo.png"
+            alt="TICLINE EVOLUCIÓN"
+            className="h-8 sm:h-9 w-auto object-contain dark:brightness-0 dark:invert opacity-90 hover:opacity-100 transition-opacity"
+          />
         </div>
       </footer>
 

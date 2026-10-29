@@ -29,7 +29,9 @@ import {
 } from '../utils/cotizador2Engine';
 import { generateProposalPdf } from '../utils/pdfGenerator';
 import { fetchLiveTrm } from '../services/trmService';
-import { COLOMBIAN_CITIES } from '../constants/colombianCities';
+import { fetchSolarRadiation } from '../services/solarRadiationService';
+import { COLOMBIAN_CITIES, ColombianCity } from '../constants/colombianCities';
+import { ColombiaMapPicker, MapLocation } from './ColombiaMapPicker';
 
 const nf = (v: number, d = 0) =>
   Number.isFinite(v) && v > 0
@@ -80,10 +82,41 @@ export function Cotizador2Calculator() {
   const [trmSource, setTrmSource] = useState<string>('');
   const [trmDate, setTrmDate] = useState<string>('');
 
-  // Ciudad seleccionada de Colombia
-  const selectedCity = useMemo(() => {
+  // Ubicación seleccionada en el mapa de Google con HSP oficial (NASA POWER) en tiempo real
+  const [mapLocation, setMapLocation] = useState<(ColombianCity & { lat: number; lng: number; direccion: string; fuente: string }) | null>(null);
+  const [hspLoading, setHspLoading] = useState(false);
+  const [hspError, setHspError] = useState('');
+
+  const handleMapSelect = async (loc: MapLocation) => {
+    setHspLoading(true);
+    setHspError('');
+    try {
+      const rad = await fetchSolarRadiation(loc.lat, loc.lng);
+      setMapLocation({
+        id: 'mapa',
+        nombre: loc.municipio,
+        departamento: loc.departamento,
+        hsp: rad.hsp,
+        hspMin: rad.hspMin,
+        hspMax: rad.hspMax,
+        lat: loc.lat,
+        lng: loc.lng,
+        direccion: loc.direccion,
+        fuente: rad.fuente,
+      });
+    } catch (err) {
+      console.error('Error consultando HSP oficial:', err);
+      setHspError('No se pudo consultar la radiación oficial (NASA POWER). Intenta de nuevo o selecciona una ciudad de la lista.');
+    } finally {
+      setHspLoading(false);
+    }
+  };
+
+  // Ciudad seleccionada de Colombia (prioriza la ubicación del mapa)
+  const selectedCity = useMemo<ColombianCity>(() => {
+    if (mapLocation) return mapLocation;
     return COLOMBIAN_CITIES.find((c) => c.id === selectedCityId) || COLOMBIAN_CITIES[1];
-  }, [selectedCityId]);
+  }, [selectedCityId, mapLocation]);
 
   const hspPromedio = selectedCity.hsp;
   const hspMinimo = selectedCity.hspMin;
@@ -171,7 +204,7 @@ export function Cotizador2Calculator() {
         ahorroPct: sis.ahorro,
         ahorroCo2Ton: r.ahorroCo2,
         arboles: r.arboles,
-        costoSolucionCop: r.costoSolucion,
+        costoSolucionCop: r.costoSolucionFinal,
         costoVatioCop: r.costoVatio * inp.trm,
         ahorroMensualCop: r.ahorroMensualCop,
         ahorro30AniosCop: r.ahorro30Anios,
@@ -301,53 +334,82 @@ export function Cotizador2Calculator() {
                   <div className="flex items-center justify-between">
                     <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
                       <MapPin className="w-4 h-4 text-emerald-500" />
-                      Ciudad de Colombia (Exclusivo Territorio Nacional)
+                      Ubicación del Proyecto en Colombia (Territorio Nacional)
                     </label>
-                    <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold">
-                      {COLOMBIAN_CITIES.length} ciudades y municipios disponibles
-                    </span>
                   </div>
 
-                  {/* Dropdown completo con todas las ciudades de Colombia */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                        Seleccionar Municipio o Ciudad de Colombia
-                      </label>
-                      <select
-                        className={fieldStyle}
-                        value={selectedCityId}
-                        onChange={(e) => setSelectedCityId(e.target.value)}
-                      >
-                        {COLOMBIAN_CITIES.map((c) => (
-                          <option key={c.id} value={c.id}>
-                            {c.nombre} ({c.departamento}) — {c.hsp.toFixed(2)} HSP
-                          </option>
-                        ))}
-                      </select>
-                      <span className="text-[11px] text-slate-400 mt-1 block">
-                        Radiación solar satelital oficial IDEAM / UPME para {selectedCity.nombre}.
-                      </span>
-                    </div>
+                  {/* Mapa interactivo con HSP oficial en tiempo real */}
+                  <ColombiaMapPicker
+                    value={mapLocation ? { lat: mapLocation.lat, lng: mapLocation.lng } : null}
+                    onSelect={handleMapSelect}
+                  />
 
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1.5">
-                        <Sun className="w-3.5 h-3.5 text-amber-500" />
-                        Criterio de Radiación Solar (HSP)
-                      </label>
-                      <select
-                        className={fieldStyle}
-                        value={inp.radiacionTipo}
-                        onChange={(e) => set({ radiacionTipo: e.target.value as RadiacionTipo })}
-                      >
-                        <option value="Promedio">Promedio ({hspPromedio.toFixed(2)} HSP - Recomendado)</option>
-                        <option value="Minimo">Mínimo / Época Lluviosa ({hspMinimo.toFixed(2)} HSP)</option>
-                        <option value="Maximo">Máximo / Época Seca ({hspMaximo.toFixed(2)} HSP)</option>
-                      </select>
-                      <span className="text-[11px] text-emerald-600 dark:text-emerald-400 mt-1 font-semibold block">
-                        Radiación aplicada al dimensionamiento: {r.radiacion.toFixed(2)} Horas Sol Pico (HSP).
-                      </span>
+                  {/* Resultado de la ubicación seleccionada en el mapa */}
+                  {hspLoading && (
+                    <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 text-xs text-slate-500 flex items-center gap-2">
+                      <Loader2 className="w-4 h-4 animate-spin text-emerald-500" />
+                      Consultando radiación solar oficial (NASA POWER) para la ubicación seleccionada...
                     </div>
+                  )}
+                  {hspError && !hspLoading && (
+                    <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-xs text-red-500">{hspError}</div>
+                  )}
+                  {mapLocation && !hspLoading && (
+                    <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 space-y-2">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div>
+                          <div className="text-sm font-extrabold text-slate-900 dark:text-white flex items-center gap-1.5">
+                            <MapPin className="w-4 h-4 text-emerald-500" />
+                            {mapLocation.nombre}, {mapLocation.departamento}
+                          </div>
+                          <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                            {mapLocation.direccion} · ({mapLocation.lat.toFixed(5)}, {mapLocation.lng.toFixed(5)})
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setMapLocation(null)}
+                          className="text-[11px] font-bold text-slate-500 hover:text-red-500 cursor-pointer self-start sm:self-auto"
+                        >
+                          Quitar ubicación del mapa
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-3 gap-2 text-center">
+                        <div className="p-2 rounded-xl bg-white dark:bg-slate-900">
+                          <div className="text-[10px] text-slate-400">Promedio anual</div>
+                          <div className="text-sm font-black text-emerald-600 dark:text-emerald-400">{mapLocation.hsp.toFixed(2)} HSP</div>
+                        </div>
+                        <div className="p-2 rounded-xl bg-white dark:bg-slate-900">
+                          <div className="text-[10px] text-slate-400">Mes mínimo</div>
+                          <div className="text-sm font-black text-slate-700 dark:text-slate-200">{mapLocation.hspMin.toFixed(2)} HSP</div>
+                        </div>
+                        <div className="p-2 rounded-xl bg-white dark:bg-slate-900">
+                          <div className="text-[10px] text-slate-400">Mes máximo</div>
+                          <div className="text-sm font-black text-slate-700 dark:text-slate-200">{mapLocation.hspMax.toFixed(2)} HSP</div>
+                        </div>
+                      </div>
+                      <div className="text-[10px] text-slate-400">Fuente oficial: {mapLocation.fuente} · NASA Langley Research Center</div>
+                    </div>
+                  )}
+
+                  {/* Criterio de Radiación Solar */}
+                  <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1.5">
+                      <Sun className="w-3.5 h-3.5 text-amber-500" />
+                      Criterio de Radiación Solar (HSP)
+                    </label>
+                    <select
+                      className={fieldStyle}
+                      value={inp.radiacionTipo}
+                      onChange={(e) => set({ radiacionTipo: e.target.value as RadiacionTipo })}
+                    >
+                      <option value="Promedio">Promedio ({hspPromedio.toFixed(2)} HSP - Recomendado)</option>
+                      <option value="Minimo">Mínimo / Época Lluviosa ({hspMinimo.toFixed(2)} HSP)</option>
+                      <option value="Maximo">Máximo / Época Seca ({hspMaximo.toFixed(2)} HSP)</option>
+                    </select>
+                    <span className="text-[11px] text-emerald-600 dark:text-emerald-400 mt-1 font-semibold block">
+                      Radiación aplicada al dimensionamiento: {r.radiacion.toFixed(2)} Horas Sol Pico (HSP).
+                    </span>
                   </div>
                 </div>
 
@@ -904,10 +966,13 @@ export function Cotizador2Calculator() {
                 </div>
 
                 <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-100 dark:border-slate-800">
-                  <span className="text-[11px] text-slate-400 block">Inversión Llave en Mano</span>
+                  <span className="text-[11px] text-slate-400 block">Inversión Llave en Mano (+0,5%)</span>
                   <div className="text-lg font-extrabold text-slate-900 dark:text-white mt-0.5">
-                    {cop(r.costoSolucion)}
+                    {cop(r.costoSolucionFinal)}
                   </div>
+                  <span className="text-[10px] text-slate-400 block mt-0.5">
+                    Sin ajuste: {cop(r.costoSolucion)} · Ajuste 0,5%: {cop(r.ajusteInversion)}
+                  </span>
                   <div className="flex justify-between items-center text-[10px] text-slate-400 mt-1">
                     <span>Retorno: {nf(r.retornoAnios)} años ({nf(r.retornoMeses)} meses)</span>
                     <span className="font-bold text-amber-500">TIR: {pct(r.tir)}</span>
@@ -1027,9 +1092,12 @@ export function Cotizador2Calculator() {
               <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center mb-3">
                 <DollarSign className="w-5 h-5" />
               </div>
-              <span className="text-xs font-bold text-slate-400 block">Inversión Llave en Mano</span>
+              <span className="text-xs font-bold text-slate-400 block">Inversión Llave en Mano (+0,5%)</span>
               <div className="text-2xl font-black text-slate-900 dark:text-white mt-1 tabular-nums">
-                {cop(r.costoSolucion)}
+                {cop(r.costoSolucionFinal)}
+              </div>
+              <div className="text-[11px] font-semibold text-slate-400 mt-1 tabular-nums">
+                Sin 0,5%: <span className="text-slate-600 dark:text-slate-300 font-bold">{cop(r.costoSolucion)}</span>
               </div>
               <div className="text-xs font-extrabold text-amber-500 mt-1">
                 $ {r.costoVatio} USD/Wp (TRM ${nf(inp.trm ?? 0)})
@@ -1205,11 +1273,12 @@ export function Cotizador2Calculator() {
                         Costo de la Solución (Inversión)
                       </span>
                       <span className="font-mono text-xs font-extrabold text-slate-900 dark:text-white">
-                        {cop(r.costoSolucion)}
+                        {cop(r.costoSolucionFinal)}
                       </span>
                     </div>
-                    <div className="font-mono text-[11px] text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900 p-2 rounded-xl border border-slate-200 dark:border-slate-800">
-                      Inversión = {nf(r.requerido.wpInstalados)} Wp × ${r.costoVatio} USD/Wp × ${nf(inp.trm ?? 0)} COP
+                    <div className="font-mono text-[11px] text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900 p-2 rounded-xl border border-slate-200 dark:border-slate-800 space-y-0.5">
+                      <div>Base = {nf(r.requerido.wpInstalados)} Wp × ${r.costoVatio} USD/Wp × ${nf(inp.trm ?? 0)} COP = {cop(r.costoSolucion)}</div>
+                      <div>Final = Base × 1,005 = {cop(r.costoSolucion)} + {cop(r.ajusteInversion)} (0,5%)</div>
                     </div>
                   </div>
 

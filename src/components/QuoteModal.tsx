@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { X, Printer, CheckCircle, Send, ShieldCheck, Sun, FileText } from 'lucide-react';
+import { X, Printer, CheckCircle, Send, ShieldCheck, FileText } from 'lucide-react';
 import { SolarCalculationResults, SolarInputs } from '../types/solar';
-import { CITIES, CURRENCIES } from '../constants/solarData';
+import { CITIES } from '../constants/solarData';
 import { formatCurrencyValue } from '../utils/solarCalculator';
 
 interface QuoteModalProps {
@@ -31,7 +31,6 @@ export const QuoteModal: React.FC<QuoteModalProps> = ({
 
   if (!isOpen) return null;
 
-  const currency = CURRENCIES[inputs.currencyCode] || CURRENCIES.USD;
   const cityName = CITIES.find((c) => c.id === inputs.cityId)?.name || 'Tu Ciudad';
 
   const validate = () => {
@@ -98,10 +97,14 @@ export const QuoteModal: React.FC<QuoteModalProps> = ({
         {/* Printable Technical Summary Header (Visible in print) */}
         <div className="p-6 bg-slate-50 dark:bg-slate-950/50 border-b border-slate-200 dark:border-slate-800">
           <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <Sun className="w-6 h-6 text-amber-500" />
-              <span className="text-lg font-black font-display tracking-tight text-slate-900 dark:text-white">
-                SOLARIS<span className="text-amber-500">PRO</span> INGENIERÍA
+            <div className="flex items-center gap-2.5">
+              <img
+                src="/ticline-logo.png"
+                alt="TICLINE"
+                className="h-7 w-auto object-contain dark:brightness-0 dark:invert"
+              />
+              <span className="text-sm font-black font-display tracking-tight text-slate-900 dark:text-white">
+                INGENIERÍA SOLAR
               </span>
             </div>
             <span className="text-xs text-slate-400">
