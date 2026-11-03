@@ -1,12 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { Crosshair, Loader2, MapPin, Search, Layers, Check } from 'lucide-react';
+import { Crosshair, Loader2, MapPin, Search, Layers } from 'lucide-react';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 declare global {
   interface Window {
-    google?: any;
     L?: any;
-    __gmapsLoaderPromise?: Promise<any>;
     __leafletLoaderPromise?: Promise<any>;
   }
 }
@@ -39,7 +37,6 @@ const COLOMBIA_CENTER = { lat: 4.5709, lng: -74.2973 };
 /** Normaliza direcciones típicas de Colombia para maximizar la exactitud de búsqueda */
 function normalizeColombianQuery(query: string): string {
   let s = query.trim();
-  // Normalizar nomenclatura colombiana abreviada
   s = s.replace(/\b(cll|cl)\.?\b/gi, 'Calle');
   s = s.replace(/\b(cra|cr|kr)\.?\b/gi, 'Carrera');
   s = s.replace(/\b(tv|tr|transv)\.?\b/gi, 'Transversal');
@@ -48,7 +45,6 @@ function normalizeColombianQuery(query: string): string {
   s = s.replace(/\bautonorte\b/gi, 'Autopista Norte');
   s = s.replace(/\bautosur\b/gi, 'Autopista Sur');
 
-  // Si no especifica Colombia, añadirlo para acotar búsqueda geográfica
   if (!/colombia/i.test(s)) {
     s = `${s}, Colombia`;
   }
@@ -76,13 +72,12 @@ function isInsideColombia(lat: number, lng: number) {
   );
 }
 
-/** Carga dinámica de Leaflet sin requerir dependencias npm adicionales */
+/** Carga dinámica de Leaflet sin dependencias npm ni claves externas */
 function loadLeaflet(): Promise<any> {
   if (window.L) return Promise.resolve(window.L);
   if (window.__leafletLoaderPromise) return window.__leafletLoaderPromise;
 
   window.__leafletLoaderPromise = new Promise((resolve, reject) => {
-    // Inyectar CSS
     if (!document.getElementById('leaflet-css')) {
       const link = document.createElement('link');
       link.id = 'leaflet-css';
@@ -91,7 +86,6 @@ function loadLeaflet(): Promise<any> {
       document.head.appendChild(link);
     }
 
-    // Inyectar JS
     const script = document.createElement('script');
     script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
     script.async = true;
@@ -103,45 +97,17 @@ function loadLeaflet(): Promise<any> {
   return window.__leafletLoaderPromise;
 }
 
-/** Carga dinámica de Google Maps con librería Places para máxima exactitud */
-function loadGoogleMaps(apiKey: string): Promise<any> {
-  if (window.google?.maps?.places) return Promise.resolve(window.google);
-  if (window.__gmapsLoaderPromise) return window.__gmapsLoaderPromise;
-
-  window.__gmapsLoaderPromise = new Promise((resolve, reject) => {
-    const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&libraries=places&language=es&region=CO&v=weekly`;
-    script.async = true;
-    script.defer = true;
-    script.onload = () => (window.google?.maps ? resolve(window.google) : reject(new Error('Google Maps no disponible')));
-    script.onerror = () => {
-      window.__gmapsLoaderPromise = undefined;
-      reject(new Error('No se pudo cargar Google Maps con la clave proporcionada'));
-    };
-    document.head.appendChild(script);
-  });
-  return window.__gmapsLoaderPromise;
-}
-
 export function ColombiaMapPicker({ value, onSelect }: ColombiaMapPickerProps) {
   const mapDivRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const mapInstanceRef = useRef<any>(null);
   const markerRef = useRef<any>(null);
   const tileLayerRef = useRef<any>(null);
-  const autocompleteRef = useRef<any>(null);
   const searchTimeoutRef = useRef<any>(null);
   const onSelectRef = useRef(onSelect);
   onSelectRef.current = onSelect;
 
-  // Clave de API de entorno o guardada localmente
-  const envKey = (import.meta as any).env?.VITE_GOOGLE_MAPS_API_KEY as string | undefined;
-  const [googleKey] = useState<string>(() => localStorage.getItem('user_google_maps_key') || envKey || '');
-
-  // Motor de mapa: 'google' o 'satellite' (Leaflet con Esri Satelital)
-  const [engine, setEngine] = useState<'google' | 'satellite'>(() => (googleKey ? 'google' : 'satellite'));
   const [layerType, setLayerType] = useState<'satellite' | 'streets'>('satellite');
-
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [errorMsg, setErrorMsg] = useState('');
   const [query, setQuery] = useState('');
@@ -152,31 +118,8 @@ export function ColombiaMapPicker({ value, onSelect }: ColombiaMapPickerProps) {
   const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
 
-  /** Geocodificación inversa gratuita con fallback robusto */
+  /** Geocodificación inversa gratuita con OpenStreetMap Nominatim */
   const reverseGeocode = async (lat: number, lng: number): Promise<{ municipio: string; departamento: string; direccion: string }> => {
-    // Si estamos con Google Maps y su geocoder está disponible
-    if (engine === 'google' && window.google?.maps?.Geocoder) {
-      try {
-        const geocoder = new window.google.maps.Geocoder();
-        const { results } = await geocoder.geocode({ location: { lat, lng } });
-        if (results?.length) {
-          const direccion = results[0].formatted_address;
-          const comps = results.flatMap((r: any) => r.address_components);
-          const find = (type: string) => comps.find((c: any) => c.types.includes(type));
-          const municipio =
-            find('locality')?.long_name ||
-            find('administrative_area_level_2')?.long_name ||
-            find('sublocality')?.long_name ||
-            'Colombia';
-          const departamento = find('administrative_area_level_1')?.long_name || 'Colombia';
-          return { municipio, departamento, direccion };
-        }
-      } catch (err) {
-        console.warn('Google reverse geocode fallback a OpenStreetMap:', err);
-      }
-    }
-
-    // Fallback: OpenStreetMap Nominatim
     try {
       const resp = await fetch(
         `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
@@ -216,11 +159,7 @@ export function ColombiaMapPicker({ value, onSelect }: ColombiaMapPickerProps) {
       return;
     }
 
-    // Actualizar posición de marcador según motor
-    if (engine === 'google' && markerRef.current?.setPosition) {
-      markerRef.current.setPosition({ lat, lng });
-      markerRef.current.setVisible(true);
-    } else if (engine === 'satellite' && markerRef.current?.setLatLng) {
+    if (markerRef.current?.setLatLng) {
       markerRef.current.setLatLng([lat, lng]);
       markerRef.current.setOpacity(1);
     }
@@ -240,17 +179,16 @@ export function ColombiaMapPicker({ value, onSelect }: ColombiaMapPickerProps) {
 
   // Mover mapa con máxima exactitud y zoom a nivel predial / tejado
   const zoomToRoof = (lat: number, lng: number, addressText?: string) => {
-    if (engine === 'satellite' && mapInstanceRef.current?.flyTo) {
+    if (mapInstanceRef.current?.flyTo) {
       mapInstanceRef.current.flyTo([lat, lng], 18, { duration: 1.2 });
-    } else if (mapInstanceRef.current?.panTo) {
-      mapInstanceRef.current.panTo({ lat, lng });
-      mapInstanceRef.current.setZoom(18);
+    } else if (mapInstanceRef.current?.setView) {
+      mapInstanceRef.current.setView([lat, lng], 18);
     }
     handleCoordinateSelected(lat, lng, addressText);
     setShowSuggestions(false);
   };
 
-  // Obtener sugerencias en tiempo real mediante ArcGIS Esri World Geocoder + Nominatim
+  // Obtener sugerencias en tiempo real mediante ArcGIS Esri World Geocoder + Nominatim (gratuitos)
   const fetchAddressSuggestions = async (rawText: string) => {
     if (!rawText || rawText.trim().length < 3) {
       setSuggestions([]);
@@ -260,7 +198,7 @@ export function ColombiaMapPicker({ value, onSelect }: ColombiaMapPickerProps) {
     const clean = normalizeColombianQuery(rawText);
     const results: SearchSuggestion[] = [];
 
-    // 1. Esri ArcGIS World Geocoding Service (Excelente para Colombia)
+    // 1. Esri ArcGIS World Geocoding Service (Público, excelente cobertura para Colombia)
     try {
       const arcgisUrl =
         'https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/findAddressCandidates' +
@@ -325,21 +263,17 @@ export function ColombiaMapPicker({ value, onSelect }: ColombiaMapPickerProps) {
     setWarning('');
     if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
 
-    // Si está en Google Maps con Places Autocomplete, el widget de Google maneja las sugerencias
-    if (engine === 'google') return;
-
     searchTimeoutRef.current = setTimeout(() => {
       fetchAddressSuggestions(val);
     }, 380);
   };
 
-  // Inicializar o reiniciar mapa cuando cambie el motor o clave
+  // Inicializar mapa interactivo con Leaflet
   useEffect(() => {
     let cancelled = false;
     setStatus('loading');
     setErrorMsg('');
 
-    // Limpiar mapa anterior si existe
     if (mapInstanceRef.current) {
       if (typeof mapInstanceRef.current.remove === 'function') {
         mapInstanceRef.current.remove();
@@ -354,129 +288,72 @@ export function ColombiaMapPicker({ value, onSelect }: ColombiaMapPickerProps) {
 
     const startPos = value ?? COLOMBIA_CENTER;
 
-    if (engine === 'google' && googleKey) {
-      // 1. Motor Google Maps
-      loadGoogleMaps(googleKey)
-        .then((google) => {
-          if (cancelled || !mapDivRef.current) return;
-          const map = new google.maps.Map(mapDivRef.current, {
-            center: startPos,
-            zoom: value ? 18 : 6,
-            mapTypeId: 'hybrid',
-            streetViewControl: false,
-            fullscreenControl: true,
-            mapTypeControl: true,
-            restriction: { latLngBounds: COLOMBIA_BOUNDS, strictBounds: false },
-          });
+    loadLeaflet()
+      .then((L) => {
+        if (cancelled || !mapDivRef.current) return;
 
-          const marker = new google.maps.Marker({
-            map,
-            position: startPos,
-            draggable: true,
-            visible: !!value,
-            title: 'Arrastra al techo exacto de la propiedad',
-          });
-
-          map.addListener('click', (e: any) => handleCoordinateSelected(e.latLng.lat(), e.latLng.lng()));
-          marker.addListener('dragend', (e: any) => handleCoordinateSelected(e.latLng.lat(), e.latLng.lng()));
-
-          // Vincular Google Places Autocomplete sobre el input si está disponible
-          if (google.maps.places?.Autocomplete && inputRef.current) {
-            const ac = new google.maps.places.Autocomplete(inputRef.current, {
-              componentRestrictions: { country: 'co' },
-              fields: ['geometry', 'formatted_address', 'name'],
-            });
-            ac.addListener('place_changed', () => {
-              const place = ac.getPlace();
-              if (place.geometry?.location) {
-                const lat = place.geometry.location.lat();
-                const lng = place.geometry.location.lng();
-                if (isInsideColombia(lat, lng)) {
-                  zoomToRoof(lat, lng, place.formatted_address || place.name);
-                }
-              }
-            });
-            autocompleteRef.current = ac;
-          }
-
-          mapInstanceRef.current = map;
-          markerRef.current = marker;
-          setStatus('ready');
-        })
-        .catch((err) => {
-          if (cancelled) return;
-          console.warn('Fallo Google Maps, cambiando a Satelital Libre:', err);
-          setEngine('satellite');
+        const map = L.map(mapDivRef.current, {
+          center: [startPos.lat, startPos.lng],
+          zoom: value ? 18 : 6,
+          minZoom: 5,
+          maxZoom: 19,
+          maxBounds: [
+            [COLOMBIA_BOUNDS.south - 1, COLOMBIA_BOUNDS.west - 1],
+            [COLOMBIA_BOUNDS.north + 1, COLOMBIA_BOUNDS.east + 1],
+          ],
         });
-    } else {
-      // 2. Motor Satelital Libre (Leaflet + Esri World Imagery Satélite de alta resolución)
-      loadLeaflet()
-        .then((L) => {
-          if (cancelled || !mapDivRef.current) return;
 
-          const map = L.map(mapDivRef.current, {
-            center: [startPos.lat, startPos.lng],
-            zoom: value ? 18 : 6,
-            minZoom: 5,
-            maxZoom: 19,
-            maxBounds: [
-              [COLOMBIA_BOUNDS.south - 1, COLOMBIA_BOUNDS.west - 1],
-              [COLOMBIA_BOUNDS.north + 1, COLOMBIA_BOUNDS.east + 1],
-            ],
-          });
+        // Capa satelital de Esri (alta resolución)
+        const esriSat = L.tileLayer(
+          'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+          { attribution: 'Tiles &copy; Esri &mdash; High Resolution Satellite Imagery', maxZoom: 19 }
+        );
 
-          // Capa satelital de Esri
-          const esriSat = L.tileLayer(
-            'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-            { attribution: 'Tiles &copy; Esri &mdash; High Resolution Satellite Imagery', maxZoom: 19 }
-          );
-
-          // Capa de calles OpenStreetMap
-          const osmStreets = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; OpenStreetMap contributors',
-            maxZoom: 19,
-          });
-
-          const activeLayer = layerType === 'satellite' ? esriSat : osmStreets;
-          activeLayer.addTo(map);
-          tileLayerRef.current = { esriSat, osmStreets, current: activeLayer };
-
-          // Marcador arrastrable de alta precisión
-          const marker = L.marker([startPos.lat, startPos.lng], {
-            draggable: true,
-            title: 'Arrastra directamente sobre el techo',
-          }).addTo(map);
-
-          if (!value) {
-            marker.setOpacity(0.5);
-          }
-
-          map.on('click', (e: any) => handleCoordinateSelected(e.latlng.lat, e.latlng.lng));
-          marker.on('dragend', () => {
-            const pos = marker.getLatLng();
-            handleCoordinateSelected(pos.lat, pos.lng);
-          });
-
-          mapInstanceRef.current = map;
-          markerRef.current = marker;
-          setStatus('ready');
-        })
-        .catch((err) => {
-          if (cancelled) return;
-          setErrorMsg(err?.message || 'Error cargando mapa satelital.');
-          setStatus('error');
+        // Capa de calles OpenStreetMap
+        const osmStreets = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '&copy; OpenStreetMap contributors',
+          maxZoom: 19,
         });
-    }
+
+        const activeLayer = layerType === 'satellite' ? esriSat : osmStreets;
+        activeLayer.addTo(map);
+        tileLayerRef.current = { esriSat, osmStreets, current: activeLayer };
+
+        // Marcador arrastrable de alta precisión
+        const marker = L.marker([startPos.lat, startPos.lng], {
+          draggable: true,
+          title: 'Arrastra directamente sobre el techo',
+        }).addTo(map);
+
+        if (!value) {
+          marker.setOpacity(0.5);
+        }
+
+        map.on('click', (e: any) => handleCoordinateSelected(e.latlng.lat, e.latlng.lng));
+        marker.on('dragend', () => {
+          const pos = marker.getLatLng();
+          handleCoordinateSelected(pos.lat, pos.lng);
+        });
+
+        mapInstanceRef.current = map;
+        markerRef.current = marker;
+        setStatus('ready');
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setErrorMsg(err?.message || 'Error cargando mapa satelital.');
+        setStatus('error');
+      });
 
     return () => {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [engine, googleKey]);
+  }, []);
 
-  // Cambiar capa satélite / calles en modo libre
+  // Cambiar capa satélite / calles
   const toggleLayerType = () => {
-    if (engine !== 'satellite' || !tileLayerRef.current || !mapInstanceRef.current) return;
+    if (!tileLayerRef.current || !mapInstanceRef.current) return;
     const { esriSat, osmStreets, current } = tileLayerRef.current;
     mapInstanceRef.current.removeLayer(current);
     const nextType = layerType === 'satellite' ? 'streets' : 'satellite';
@@ -502,22 +379,7 @@ export function ColombiaMapPicker({ value, onSelect }: ColombiaMapPickerProps) {
     }
 
     try {
-      // 2. Si usa Google Maps con geocoder
-      if (engine === 'google' && window.google?.maps?.Geocoder) {
-        const geocoder = new window.google.maps.Geocoder();
-        const { results } = await geocoder.geocode({
-          address: normalizeColombianQuery(query),
-          componentRestrictions: { country: 'CO' },
-        });
-        if (results?.length) {
-          const loc = results[0].geometry.location;
-          zoomToRoof(loc.lat(), loc.lng(), results[0].formatted_address);
-          setBusy(false);
-          return;
-        }
-      }
-
-      // 3. Búsqueda exacta con Esri ArcGIS (máxima precisión en Colombia)
+      // 2. Búsqueda exacta con Esri ArcGIS (máxima cobertura en Colombia)
       const clean = normalizeColombianQuery(query);
       const arcgisUrl =
         'https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/findAddressCandidates' +
@@ -533,7 +395,7 @@ export function ColombiaMapPicker({ value, onSelect }: ColombiaMapPickerProps) {
         }
       }
 
-      // 4. Fallback con OpenStreetMap Nominatim
+      // 3. Fallback con OpenStreetMap Nominatim
       const osmRes = await fetch(
         `https://nominatim.openstreetmap.org/search?format=json&countrycodes=co&q=${encodeURIComponent(clean)}&limit=1`
       );
@@ -559,7 +421,7 @@ export function ColombiaMapPicker({ value, onSelect }: ColombiaMapPickerProps) {
     }
   };
 
-  // Botón "Mi ubicación actual" con GPS
+  // Botón "Mi ubicación actual" con GPS del navegador
   const handleMyLocation = () => {
     if (!navigator.geolocation) {
       setWarning('Tu navegador no soporta geolocalización.');
@@ -667,23 +529,17 @@ export function ColombiaMapPicker({ value, onSelect }: ColombiaMapPickerProps) {
       {/* Controles de Capa */}
       <div className="flex items-center justify-between gap-2 text-xs">
         <div className="flex items-center gap-2">
-          {engine === 'satellite' ? (
-            <button
-              type="button"
-              onClick={toggleLayerType}
-              className="px-2.5 py-1 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:border-emerald-500 font-semibold flex items-center gap-1.5 cursor-pointer transition-colors"
-            >
-              <Layers className="w-3.5 h-3.5 text-emerald-500" />
-              <span>Capa: {layerType === 'satellite' ? 'Satélite Esri HD' : 'Calles'}</span>
-            </button>
-          ) : (
-            <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-              <Check className="w-3.5 h-3.5" /> Motor Google Maps Híbrido Activo
-            </span>
-          )}
+          <button
+            type="button"
+            onClick={toggleLayerType}
+            className="px-2.5 py-1 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:border-emerald-500 font-semibold flex items-center gap-1.5 cursor-pointer transition-colors"
+          >
+            <Layers className="w-3.5 h-3.5 text-emerald-500" />
+            <span>Capa: {layerType === 'satellite' ? 'Satélite Esri HD' : 'Calles'}</span>
+          </button>
 
           <span className="text-[11px] text-slate-400 hidden sm:inline">
-            {engine === 'satellite' ? '🛰️ Vista Satelital de Alta Resolución' : '🗺️ Google Maps Activo'}
+            🛰️ Vista Satelital de Alta Resolución
           </span>
         </div>
       </div>
@@ -725,4 +581,3 @@ export function ColombiaMapPicker({ value, onSelect }: ColombiaMapPickerProps) {
     </div>
   );
 }
-

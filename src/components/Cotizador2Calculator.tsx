@@ -73,7 +73,6 @@ export const SMART_INITIAL_INPUTS: Cotizador2FormInputs = {
 export function Cotizador2Calculator() {
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [inp, setInp] = useState<Cotizador2FormInputs>(SMART_INITIAL_INPUTS);
-  const [selectedCityId, setSelectedCityId] = useState<string>('medellin');
   const [projectName, setProjectName] = useState('');
   const [clientName, setClientName] = useState('');
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
@@ -82,8 +81,8 @@ export function Cotizador2Calculator() {
   const [trmSource, setTrmSource] = useState<string>('');
   const [trmDate, setTrmDate] = useState<string>('');
 
-  // Ubicación seleccionada en el mapa de Google con HSP oficial (NASA POWER) en tiempo real
-  const [mapLocation, setMapLocation] = useState<(ColombianCity & { lat: number; lng: number; direccion: string; fuente: string }) | null>(null);
+  // Ubicación seleccionada en el mapa con HSP oficial (NASA POWER) en tiempo real
+  const [mapLocation, setMapLocation] = useState<(ColombianCity & { lat: number; lng: number; direccion: string }) | null>(null);
   const [hspLoading, setHspLoading] = useState(false);
   const [hspError, setHspError] = useState('');
 
@@ -92,31 +91,16 @@ export function Cotizador2Calculator() {
     setHspError('');
     try {
       const rad = await fetchSolarRadiation(loc.lat, loc.lng);
-      setMapLocation({
-        id: 'mapa',
-        nombre: loc.municipio,
-        departamento: loc.departamento,
-        hsp: rad.hsp,
-        hspMin: rad.hspMin,
-        hspMax: rad.hspMax,
-        lat: loc.lat,
-        lng: loc.lng,
-        direccion: loc.direccion,
-        fuente: rad.fuente,
-      });
-    } catch (err) {
-      console.error('Error consultando HSP oficial:', err);
-      setHspError('No se pudo consultar la radiación oficial (NASA POWER). Intenta de nuevo o selecciona una ciudad de la lista.');
+      setMapLocation({ id: 'mapa', nombre: loc.municipio, departamento: loc.departamento, hsp: rad.hsp, hspMin: rad.hspMin, hspMax: rad.hspMax, lat: loc.lat, lng: loc.lng, direccion: loc.direccion });
+    } catch {
+      setHspError('No se pudo consultar la radiación solar (NASA POWER). Intenta de nuevo.');
     } finally {
       setHspLoading(false);
     }
   };
 
-  // Ciudad seleccionada de Colombia (prioriza la ubicación del mapa)
-  const selectedCity = useMemo<ColombianCity>(() => {
-    if (mapLocation) return mapLocation;
-    return COLOMBIAN_CITIES.find((c) => c.id === selectedCityId) || COLOMBIAN_CITIES[1];
-  }, [selectedCityId, mapLocation]);
+  // Ubicación del mapa o Medellín por defecto
+  const selectedCity = useMemo<ColombianCity>(() => mapLocation || COLOMBIAN_CITIES.find((c) => c.id === 'medellin') || COLOMBIAN_CITIES[1], [mapLocation]);
 
   const hspPromedio = selectedCity.hsp;
   const hspMinimo = selectedCity.hspMin;
@@ -334,82 +318,48 @@ export function Cotizador2Calculator() {
                   <div className="flex items-center justify-between">
                     <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
                       <MapPin className="w-4 h-4 text-emerald-500" />
-                      Ubicación del Proyecto en Colombia (Territorio Nacional)
+                      Ubicación del Proyecto en Colombia
                     </label>
                   </div>
 
-                  {/* Mapa interactivo con HSP oficial en tiempo real */}
+                  {/* Mapa interactivo: búsqueda de direcciones y ubicación en tiempo real */}
                   <ColombiaMapPicker
                     value={mapLocation ? { lat: mapLocation.lat, lng: mapLocation.lng } : null}
                     onSelect={handleMapSelect}
                   />
-
-                  {/* Resultado de la ubicación seleccionada en el mapa */}
                   {hspLoading && (
-                    <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 text-xs text-slate-500 flex items-center gap-2">
-                      <Loader2 className="w-4 h-4 animate-spin text-emerald-500" />
-                      Consultando radiación solar oficial (NASA POWER) para la ubicación seleccionada...
+                    <div className="text-xs text-slate-500 flex items-center gap-2">
+                      <Loader2 className="w-4 h-4 animate-spin text-emerald-500" /> Consultando radiación solar de la ubicación...
                     </div>
                   )}
-                  {hspError && !hspLoading && (
-                    <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-xs text-red-500">{hspError}</div>
-                  )}
+                  {hspError && <div className="text-xs text-red-500">{hspError}</div>}
                   {mapLocation && !hspLoading && (
-                    <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 space-y-2">
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                        <div>
-                          <div className="text-sm font-extrabold text-slate-900 dark:text-white flex items-center gap-1.5">
-                            <MapPin className="w-4 h-4 text-emerald-500" />
-                            {mapLocation.nombre}, {mapLocation.departamento}
-                          </div>
-                          <div className="text-[11px] text-slate-500 dark:text-slate-400">
-                            {mapLocation.direccion} · ({mapLocation.lat.toFixed(5)}, {mapLocation.lng.toFixed(5)})
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => setMapLocation(null)}
-                          className="text-[11px] font-bold text-slate-500 hover:text-red-500 cursor-pointer self-start sm:self-auto"
-                        >
-                          Quitar ubicación del mapa
-                        </button>
-                      </div>
-                      <div className="grid grid-cols-3 gap-2 text-center">
-                        <div className="p-2 rounded-xl bg-white dark:bg-slate-900">
-                          <div className="text-[10px] text-slate-400">Promedio anual</div>
-                          <div className="text-sm font-black text-emerald-600 dark:text-emerald-400">{mapLocation.hsp.toFixed(2)} HSP</div>
-                        </div>
-                        <div className="p-2 rounded-xl bg-white dark:bg-slate-900">
-                          <div className="text-[10px] text-slate-400">Mes mínimo</div>
-                          <div className="text-sm font-black text-slate-700 dark:text-slate-200">{mapLocation.hspMin.toFixed(2)} HSP</div>
-                        </div>
-                        <div className="p-2 rounded-xl bg-white dark:bg-slate-900">
-                          <div className="text-[10px] text-slate-400">Mes máximo</div>
-                          <div className="text-sm font-black text-slate-700 dark:text-slate-200">{mapLocation.hspMax.toFixed(2)} HSP</div>
-                        </div>
-                      </div>
-                      <div className="text-[10px] text-slate-400">Fuente oficial: {mapLocation.fuente} · NASA Langley Research Center</div>
+                    <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-xs text-slate-700 dark:text-slate-200">
+                      <b>{mapLocation.nombre}, {mapLocation.departamento}</b> — {mapLocation.direccion} ({mapLocation.lat.toFixed(5)}, {mapLocation.lng.toFixed(5)})
                     </div>
                   )}
 
-                  {/* Criterio de Radiación Solar */}
-                  <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
-                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1.5">
-                      <Sun className="w-3.5 h-3.5 text-amber-500" />
-                      Criterio de Radiación Solar (HSP)
-                    </label>
-                    <select
-                      className={fieldStyle}
-                      value={inp.radiacionTipo}
-                      onChange={(e) => set({ radiacionTipo: e.target.value as RadiacionTipo })}
-                    >
-                      <option value="Promedio">Promedio ({hspPromedio.toFixed(2)} HSP - Recomendado)</option>
-                      <option value="Minimo">Mínimo / Época Lluviosa ({hspMinimo.toFixed(2)} HSP)</option>
-                      <option value="Maximo">Máximo / Época Seca ({hspMaximo.toFixed(2)} HSP)</option>
-                    </select>
-                    <span className="text-[11px] text-emerald-600 dark:text-emerald-400 mt-1 font-semibold block">
-                      Radiación aplicada al dimensionamiento: {r.radiacion.toFixed(2)} Horas Sol Pico (HSP).
-                    </span>
+                  <div className="grid grid-cols-1 gap-4 pt-1">
+
+                    {/* Criterio de Radiación Solar */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1.5">
+                        <Sun className="w-3.5 h-3.5 text-amber-500" />
+                        Criterio de Radiación Solar (HSP)
+                      </label>
+                      <select
+                        className={fieldStyle}
+                        value={inp.radiacionTipo}
+                        onChange={(e) => set({ radiacionTipo: e.target.value as RadiacionTipo })}
+                      >
+                        <option value="Promedio">Promedio ({hspPromedio.toFixed(2)} HSP - Recomendado)</option>
+                        <option value="Minimo">Mínimo / Época Lluviosa ({hspMinimo.toFixed(2)} HSP)</option>
+                        <option value="Maximo">Máximo / Época Seca ({hspMaximo.toFixed(2)} HSP)</option>
+                      </select>
+                      <span className="text-[11px] text-emerald-600 dark:text-emerald-400 mt-1 font-semibold block">
+                        Radiación aplicada: {r.radiacion.toFixed(2)} Horas Sol Pico (HSP).
+                      </span>
+                    </div>
                   </div>
                 </div>
 
