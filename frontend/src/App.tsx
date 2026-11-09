@@ -2,11 +2,45 @@ import { useState, useEffect } from 'react';
 import { Header } from './components/Header';
 import { HeroSection } from './components/HeroSection';
 import { Cotizador2Calculator } from './components/Cotizador2Calculator';
+import { Login, AuthUser } from './components/Login';
 
 export default function App() {
   const [darkMode, setDarkMode] = useState<boolean>(() => true);
   const [selectedCurrency, setSelectedCurrency] = useState<string>('COP');
   const [showCalculator, setShowCalculator] = useState<boolean>(false);
+
+  // Estado de autenticación JWT
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
+    return Boolean(
+      localStorage.getItem('solar_auth_token') ||
+      sessionStorage.getItem('solar_auth_token')
+    );
+  });
+
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => {
+    const raw =
+      localStorage.getItem('solar_auth_user') ||
+      sessionStorage.getItem('solar_auth_user');
+    try {
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  const handleLoginSuccess = (_token: string, user: AuthUser) => {
+    setCurrentUser(user);
+    setIsAuthenticated(true);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('solar_auth_token');
+    localStorage.removeItem('solar_auth_user');
+    sessionStorage.removeItem('solar_auth_token');
+    sessionStorage.removeItem('solar_auth_user');
+    setCurrentUser(null);
+    setIsAuthenticated(false);
+  };
 
   // Synchronize HTML dark class
   useEffect(() => {
@@ -52,6 +86,11 @@ export default function App() {
     }
   };
 
+  // Si el usuario no ha iniciado sesión, mostrar pantalla de Login
+  if (!isAuthenticated) {
+    return <Login onLoginSuccess={handleLoginSuccess} />;
+  }
+
   return (
     <div className={`min-h-screen ${darkMode ? 'dark bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'} transition-colors duration-200`}>
 
@@ -63,6 +102,8 @@ export default function App() {
         onSelectCurrency={setSelectedCurrency}
         onOpenQuoteModal={handleOpenQuote}
         onOpenCalculator={handleStartCalculator}
+        onLogout={handleLogout}
+        currentUser={currentUser}
       />
 
       {/* Hero Section Inicial */}

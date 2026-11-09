@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sun, Moon, FileText } from 'lucide-react';
+import { Sun, Moon, FileText, LogOut, User } from 'lucide-react';
 import { CURRENCIES } from '../constants/solarData';
 
 interface HeaderProps {
@@ -9,6 +9,8 @@ interface HeaderProps {
   onSelectCurrency: (code: string) => void;
   onOpenQuoteModal: () => void;
   onOpenCalculator?: () => void;
+  onLogout?: () => void;
+  currentUser?: { email: string; nombre: string } | null;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -18,6 +20,8 @@ export const Header: React.FC<HeaderProps> = ({
   onSelectCurrency,
   onOpenQuoteModal,
   onOpenCalculator,
+  onLogout,
+  currentUser,
 }) => {
   return (
     <header className="sticky top-0 z-40 w-full backdrop-blur-md border-b transition-colors duration-200 border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-950/90">
@@ -86,6 +90,27 @@ export const Header: React.FC<HeaderProps> = ({
             <span className="hidden sm:inline">Solicitar Propuesta</span>
             <span className="sm:hidden">Cotizar</span>
           </button>
+
+          {/* User Profile & Logout */}
+          {onLogout && (
+            <div className="flex items-center gap-1.5 pl-1 border-l border-slate-200 dark:border-slate-800">
+              {currentUser && (
+                <span className="hidden xl:inline text-xs font-semibold text-slate-400 flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-900">
+                  <User className="w-3.5 h-3.5 text-emerald-400" />
+                  {currentUser.nombre}
+                </span>
+              )}
+              <button
+                type="button"
+                onClick={onLogout}
+                title="Cerrar sesión"
+                aria-label="Cerrar sesión"
+                className="p-2 rounded-lg bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-500 hover:text-red-400 hover:border-red-500/40 hover:scale-105 transition-all cursor-pointer"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>
+          )}
         </div>
 
       </div>
