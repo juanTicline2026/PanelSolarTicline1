@@ -1,6 +1,50 @@
-import { Response } from 'express';
-import { pool, isPostgresConnected, cotizacionesStore, CotizacionRecord } from '../config/db.ts';
-import { AuthenticatedRequest } from '../middlewares/authMiddleware.ts';
+import { Request, Response } from 'express';
+import { pool, isPostgresConnected, cotizacionesStore, CotizacionRecord } from '../config/db.js';
+import { AuthenticatedRequest } from '../middlewares/authMiddleware.js';
+import { getDatabaseFormulas, calculateCotizacionFromDb } from '../services/cotizadorEngine.js';
+import { getLiveTrmFromBackend, getSolarRadiationFromBackend } from '../services/externalApisService.js';
+
+export async function getTrm(_req: Request, res: Response) {
+  try {
+    const trm = await getLiveTrmFromBackend();
+    res.json(trm);
+  } catch (err: any) {
+    res.status(500).json({ error: err?.message || 'Error consultando TRM en el backend' });
+  }
+}
+
+export async function getRadiacion(req: Request, res: Response) {
+  try {
+    const lat = Number(req.query.lat);
+    const lng = Number(req.query.lng);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+      res.status(400).json({ error: 'Debes enviar parámetros válidos lat y lng' });
+      return;
+    }
+    const rad = await getSolarRadiationFromBackend(lat, lng);
+    res.json(rad);
+  } catch (err: any) {
+    res.status(500).json({ error: err?.message || 'Error consultando radiación solar en el backend' });
+  }
+}
+
+export async function getFormulas(_req: Request, res: Response) {
+  try {
+    const data = await getDatabaseFormulas();
+    res.json(data);
+  } catch (err: any) {
+    res.status(500).json({ error: err?.message || 'Error consultando fórmulas en PostgreSQL' });
+  }
+}
+
+export async function calcularCotizacion(req: Request, res: Response) {
+  try {
+    const resultado = await calculateCotizacionFromDb(req.body || {});
+    res.json(resultado);
+  } catch (err: any) {
+    res.status(500).json({ error: err?.message || 'Error calculando cotización solar en el backend' });
+  }
+}
 
 export async function getCotizaciones(_req: AuthenticatedRequest, res: Response) {
   if (isPostgresConnected) {

@@ -1,5 +1,19 @@
 import React, { useState } from 'react';
-import { Lock, Mail, Eye, EyeOff, ArrowRight, ShieldCheck, AlertCircle, Loader2 } from 'lucide-react';
+import {
+  Lock,
+  Mail,
+  Eye,
+  EyeOff,
+  ArrowRight,
+  ArrowLeft,
+  ShieldCheck,
+  AlertCircle,
+  CheckCircle2,
+  Loader2,
+  UserPlus,
+  User,
+  Briefcase,
+} from 'lucide-react';
 
 export interface AuthUser {
   email: string;
@@ -12,107 +26,147 @@ interface LoginProps {
 }
 
 export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
+  const [viewMode, setViewMode] = useState<'login' | 'register'>('login');
+
+  // Estados de Login
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(true);
+
+  // Estados de Registro
+  const [regNombre, setRegNombre] = useState('');
+  const [regEmail, setRegEmail] = useState('');
+  const [regRol, setRegRol] = useState('Ingeniero de Proyectos');
+  const [regPassword, setRegPassword] = useState('');
+  const [regConfirmPassword, setRegConfirmPassword] = useState('');
+  const [showRegPassword, setShowRegPassword] = useState(false);
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
 
-  // Función para procesar el inicio de sesión con el Backend (JWT)
-  const handleSubmit = async (e: React.FormEvent) => {
+  // Procesar Inicio de Sesión estricto contra PostgreSQL (POST /api/auth/login)
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setSuccessMsg('');
 
     if (!email.trim() || !password.trim()) {
-      setError('Por favor completa todos los campos.');
-      return;
-    }
-
-    if (password.length < 4) {
-      setError('La contraseña debe tener al menos 4 caracteres.');
+      setError('Por favor ingresa tu correo y contraseña.');
       return;
     }
 
     setLoading(true);
-
     try {
-      let token = '';
-      let user: AuthUser;
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim(), password }),
+      });
 
+      let data: any = {};
       try {
-        // 1. Intentar autenticar contra el Backend real (/api/auth/login)
-        const res = await fetch('/api/auth/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password }),
-        });
-
-        const data = await res.json();
-        if (!res.ok) {
-          throw new Error(data.message || 'Credenciales inválidas.');
-        }
-
-        token = data.token;
-        user = data.user;
-      } catch (networkErr: any) {
-        // Si el error viene de credenciales rechazadas por el backend, mostrarlo
-        if (networkErr?.message && !networkErr.message.includes('Failed to fetch') && !networkErr.message.includes('Unexpected token')) {
-          throw networkErr;
-        }
-
-        // 2. Modo respaldo local (si el servidor backend aún no está encendido)
-        await new Promise((resolve) => setTimeout(resolve, 600));
-        const demoHeader = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
-        const demoPayload = btoa(
-          JSON.stringify({
-            sub: 'user_123',
-            email,
-            nombre: email.split('@')[0].toUpperCase(),
-            rol: 'Ingeniero de Proyectos',
-            iat: Math.floor(Date.now() / 1000),
-            exp: Math.floor(Date.now() / 1000) + 60 * 60 * 8,
-          })
+        data = await res.json();
+      } catch {
+        throw new Error(
+          'El servidor Backend no está respondiendo. Asegúrate de tener corriendo "npm run dev:backend".'
         );
-        const demoSignature = btoa('demo_signature_ticline_solar');
-        token = `${demoHeader}.${demoPayload}.${demoSignature}`;
-        user = {
-          email,
-          nombre: email.split('@')[0].toUpperCase(),
-          rol: 'Ingeniero de Proyectos',
-        };
       }
 
-      if (rememberMe) {
-        localStorage.setItem('solar_auth_token', token);
-        localStorage.setItem('solar_auth_user', JSON.stringify(user));
-      } else {
-        sessionStorage.setItem('solar_auth_token', token);
-        sessionStorage.setItem('solar_auth_user', JSON.stringify(user));
+      if (!res.ok) {
+        throw new Error(
+          data.message || 'Acceso denegado: tus credenciales no existen en la base de datos PostgreSQL.'
+        );
       }
 
-      onLoginSuccess(token, user);
+      onLoginSuccess(data.token, data.user);
     } catch (err: any) {
-      setError(err?.message || 'Error al iniciar sesión. Verifica tus credenciales.');
+      if (err?.message?.includes('Failed to fetch')) {
+        setError('No se pudo conectar al Backend (puerto 4000). Ejecuta "npm run dev:backend".');
+      } else {
+        setError(err?.message || 'Error al iniciar sesión.');
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  const handleUseDemo = (demoEmail: string) => {
-    setEmail(demoEmail);
-    setPassword('123456');
+  // Procesar Registro de Nuevo Usuario en PostgreSQL (POST /api/auth/register)
+  const handleRegisterSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     setError('');
+    setSuccessMsg('');
+
+    if (!regNombre.trim() || !regEmail.trim() || !regPassword.trim()) {
+      setError('Por favor completa todos los campos obligatorios.');
+      return;
+    }
+
+    if (regPassword.length < 4) {
+      setError('La contraseña debe tener al menos 4 caracteres.');
+      return;
+    }
+
+    if (regPassword !== regConfirmPassword) {
+      setError('Las contraseñas no coinciden.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nombre: regNombre.trim(),
+          email: regEmail.trim(),
+          rol: regRol,
+          password: regPassword,
+        }),
+      });
+
+      let data: any = {};
+      try {
+        data = await res.json();
+      } catch {
+        throw new Error(
+          'El servidor Backend no está respondiendo. Asegúrate de tener corriendo "npm run dev:backend".'
+        );
+      }
+
+      if (!res.ok) {
+        throw new Error(data.message || 'No se pudo registrar el usuario en PostgreSQL.');
+      }
+
+      // Pasar a la vista de Login con el correo recién creado
+      setEmail(regEmail.trim());
+      setPassword('');
+      setRegNombre('');
+      setRegEmail('');
+      setRegPassword('');
+      setRegConfirmPassword('');
+      setViewMode('login');
+      setSuccessMsg(
+        `¡Usuario "${data.user?.email || regEmail}" guardado en la tabla usuarios de PostgreSQL! Ahora inicia sesión.`
+      );
+    } catch (err: any) {
+      if (err?.message?.includes('Failed to fetch')) {
+        setError('No se pudo conectar al Backend (puerto 4000). Ejecuta "npm run dev:backend".');
+      } else {
+        setError(err?.message || 'Error al registrar usuario.');
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Luces y degradados ambientales de fondo */}
+      {/* Luces ambientales */}
       <div className="absolute top-1/4 -left-32 w-96 h-96 bg-emerald-500/15 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-1/4 -right-32 w-96 h-96 bg-teal-500/15 rounded-full blur-3xl pointer-events-none" />
 
       <div className="w-full max-w-md relative z-10 animate-fadeIn">
-        {/* Tarjeta de Login */}
         <div className="rounded-3xl border border-slate-800 bg-slate-900/90 backdrop-blur-xl p-8 sm:p-10 shadow-2xl space-y-6">
           {/* Logo y Encabezado */}
           <div className="text-center space-y-3">
@@ -125,10 +179,12 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
             </div>
             <div>
               <h2 className="text-2xl font-black font-display text-white tracking-tight">
-                Plataforma Solar
+                {viewMode === 'login' ? 'Iniciar Sesión' : 'Registro de Usuario'}
               </h2>
               <p className="text-xs text-slate-400 mt-1">
-                Ingresa con tus credenciales autorizadas de ingeniería
+                {viewMode === 'login'
+                  ? 'Ingresa con tu cuenta registrada en PostgreSQL'
+                  : 'Crea tu cuenta y guárdala en la tabla usuarios de PostgreSQL'}
               </p>
             </div>
           </div>
@@ -141,117 +197,243 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
             </div>
           )}
 
-          {/* Formulario */}
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Campo Correo Electrónico */}
-            <div className="space-y-1.5">
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">
-                Correo Electrónico
-              </label>
-              <div className="relative">
-                <Mail className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="ejemplo@ticline.co"
-                  className="w-full rounded-xl border border-slate-700 bg-slate-950/80 pl-10 pr-4 py-2.5 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-400 transition-all"
-                />
-              </div>
+          {/* Alerta de Éxito al Registrarse */}
+          {successMsg && (
+            <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-xs text-emerald-300 flex items-start gap-2.5 animate-fadeIn">
+              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+              <span>{successMsg}</span>
             </div>
+          )}
 
-            {/* Campo Contraseña */}
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
+          {viewMode === 'login' ? (
+            /* ==================== VISTA 1: FORMULARIO DE LOGIN ==================== */
+            <form onSubmit={handleLoginSubmit} className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">
+                  Correo Electrónico
+                </label>
+                <div className="relative">
+                  <Mail className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="usuario@ticline.co"
+                    className="w-full rounded-xl border border-slate-700 bg-slate-950/80 pl-10 pr-4 py-2.5 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-400 transition-all"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">
                   Contraseña
                 </label>
+                <div className="relative">
+                  <Lock className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full rounded-xl border border-slate-700 bg-slate-950/80 pl-10 pr-10 py-2.5 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-400 transition-all"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 p-1 cursor-pointer"
+                    tabIndex={-1}
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
               </div>
-              <div className="relative">
-                <Lock className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full rounded-xl border border-slate-700 bg-slate-950/80 pl-10 pr-10 py-2.5 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-400 transition-all"
-                />
+
+              <div className="flex items-center justify-between text-xs pt-1">
+                <span className="text-[11px] text-slate-400">Base de datos: PostgreSQL (`usuarios`)</span>
+                <span className="text-[11px] text-emerald-400 font-semibold flex items-center gap-1">
+                  <ShieldCheck className="w-3.5 h-3.5" /> Token JWT
+                </span>
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-extrabold text-sm shadow-lg shadow-emerald-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Verificando en PostgreSQL...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Ingresar a la Plataforma</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
+              </button>
+
+              {/* Botón Registrarse que salta a la vista de Registro */}
+              <div className="pt-4 border-t border-slate-800 space-y-2.5">
+                <p className="text-center text-xs text-slate-400">
+                  ¿No tienes un usuario registrado en la base de datos?
+                </p>
                 <button
                   type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 p-1 cursor-pointer"
-                  tabIndex={-1}
+                  onClick={() => {
+                    setError('');
+                    setSuccessMsg('');
+                    setViewMode('register');
+                  }}
+                  className="w-full py-2.5 rounded-2xl border border-emerald-500/40 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 font-extrabold text-xs transition-all flex items-center justify-center gap-2 cursor-pointer"
                 >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  <UserPlus className="w-4 h-4" />
+                  <span>Registrarse</span>
                 </button>
               </div>
-            </div>
+            </form>
+          ) : (
+            /* ==================== VISTA 2: FORMULARIO DE REGISTRO ==================== */
+            <form onSubmit={handleRegisterSubmit} className="space-y-4">
+              {/* Nombre Completo */}
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">
+                  Nombre Completo
+                </label>
+                <div className="relative">
+                  <User className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    required
+                    value={regNombre}
+                    onChange={(e) => setRegNombre(e.target.value)}
+                    placeholder="Ej: Juan Pérez"
+                    className="w-full rounded-xl border border-slate-700 bg-slate-950/80 pl-10 pr-4 py-2.5 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-400 transition-all"
+                  />
+                </div>
+              </div>
 
-            {/* Checkbox Recordar Sesión */}
-            <div className="flex items-center justify-between text-xs pt-1">
-              <label className="flex items-center gap-2 text-slate-400 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
-                  className="rounded border-slate-700 bg-slate-950 text-emerald-500 focus:ring-emerald-400"
-                />
-                <span>Recordar sesión</span>
-              </label>
-              <span className="text-[11px] text-emerald-400 font-semibold flex items-center gap-1">
-                <ShieldCheck className="w-3.5 h-3.5" /> Sesión protegida JWT
-              </span>
-            </div>
+              {/* Correo Electrónico */}
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">
+                  Correo Electrónico
+                </label>
+                <div className="relative">
+                  <Mail className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="email"
+                    required
+                    value={regEmail}
+                    onChange={(e) => setRegEmail(e.target.value)}
+                    placeholder="correo@ticline.co"
+                    className="w-full rounded-xl border border-slate-700 bg-slate-950/80 pl-10 pr-4 py-2.5 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-400 transition-all"
+                  />
+                </div>
+              </div>
 
-            {/* Botón Ingresar */}
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-extrabold text-sm shadow-lg shadow-emerald-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Validando acceso...</span>
-                </>
-              ) : (
-                <>
-                  <span>Ingresar a la Plataforma</span>
-                  <ArrowRight className="w-4 h-4" />
-                </>
-              )}
-            </button>
-          </form>
+              {/* Cargo / Rol */}
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">
+                  Rol en la Plataforma
+                </label>
+                <div className="relative">
+                  <Briefcase className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <select
+                    value={regRol}
+                    onChange={(e) => setRegRol(e.target.value)}
+                    className="w-full rounded-xl border border-slate-700 bg-slate-950/80 pl-10 pr-4 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-emerald-400 transition-all"
+                  >
+                    <option value="Ingeniero de Proyectos">Ingeniero de Proyectos</option>
+                    <option value="Administrador">Administrador</option>
+                    <option value="Asesor Comercial Solar">Asesor Comercial Solar</option>
+                  </select>
+                </div>
+              </div>
 
-          {/* Accesos rápidos de prueba */}
-          <div className="pt-4 border-t border-slate-800 text-center space-y-2">
-            <span className="text-[11px] text-slate-500 block">
-              Accesos rápidos para pruebas (Contraseña: 123456):
-            </span>
-            <div className="flex justify-center gap-2">
+              {/* Contraseña */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">
+                    Contraseña
+                  </label>
+                  <div className="relative">
+                    <Lock className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                    <input
+                      type={showRegPassword ? 'text' : 'password'}
+                      required
+                      value={regPassword}
+                      onChange={(e) => setRegPassword(e.target.value)}
+                      placeholder="Mín. 4 caracteres"
+                      className="w-full rounded-xl border border-slate-700 bg-slate-950/80 pl-9 pr-8 py-2.5 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-400 transition-all"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowRegPassword(!showRegPassword)}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 cursor-pointer"
+                      tabIndex={-1}
+                    >
+                      {showRegPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">
+                    Confirmar
+                  </label>
+                  <div className="relative">
+                    <Lock className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                    <input
+                      type={showRegPassword ? 'text' : 'password'}
+                      required
+                      value={regConfirmPassword}
+                      onChange={(e) => setRegConfirmPassword(e.target.value)}
+                      placeholder="Repite la clave"
+                      className="w-full rounded-xl border border-slate-700 bg-slate-950/80 pl-9 pr-3 py-2.5 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-400 transition-all"
+                    />
+                  </div>
+                </div>
+              </div>
+
               <button
-                type="button"
-                onClick={() => handleUseDemo('admin@ticline.co')}
-                className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-[11px] font-semibold text-emerald-400 transition-colors cursor-pointer"
+                type="submit"
+                disabled={loading}
+                className="w-full py-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-extrabold text-sm shadow-lg shadow-emerald-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
               >
-                admin@ticline.co
+                {loading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Guardando en PostgreSQL...</span>
+                  </>
+                ) : (
+                  <>
+                    <UserPlus className="w-4 h-4" />
+                    <span>Guardar Usuario y Registrarse</span>
+                  </>
+                )}
               </button>
-              <button
-                type="button"
-                onClick={() => handleUseDemo('ingenieria@ticline.co')}
-                className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-[11px] font-semibold text-teal-400 transition-colors cursor-pointer"
-              >
-                ingenieria@ticline.co
-              </button>
-            </div>
-          </div>
+
+              <div className="pt-3 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setError('');
+                    setViewMode('login');
+                  }}
+                  className="w-full py-2.5 rounded-2xl border border-slate-700 bg-slate-800/60 hover:bg-slate-800 text-slate-300 font-bold text-xs transition-all flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  <span>Volver al Login</span>
+                </button>
+              </div>
+            </form>
+          )}
         </div>
 
-        {/* Footer confidencial */}
         <p className="text-center text-[11px] text-slate-600 mt-6">
-          © {new Date().getFullYear()} TICLINE EVOLUCIÓN · Acceso seguro exclusivo
+          © {new Date().getFullYear()} TICLINE EVOLUCIÓN · Autenticación PostgreSQL + JWT
         </p>
       </div>
     </div>

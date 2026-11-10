@@ -9,26 +9,13 @@ export default function App() {
   const [selectedCurrency, setSelectedCurrency] = useState<string>('COP');
   const [showCalculator, setShowCalculator] = useState<boolean>(false);
 
-  // Estado de autenticación JWT
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
-    return Boolean(
-      localStorage.getItem('solar_auth_token') ||
-      sessionStorage.getItem('solar_auth_token')
-    );
-  });
+  // Al iniciar la plataforma siempre arranca en false para exigir Login contra PostgreSQL
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
 
-  const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => {
-    const raw =
-      localStorage.getItem('solar_auth_user') ||
-      sessionStorage.getItem('solar_auth_user');
-    try {
-      return raw ? JSON.parse(raw) : null;
-    } catch {
-      return null;
-    }
-  });
-
-  const handleLoginSuccess = (_token: string, user: AuthUser) => {
+  const handleLoginSuccess = (token: string, user: AuthUser) => {
+    sessionStorage.setItem('solar_auth_token', token);
+    sessionStorage.setItem('solar_auth_user', JSON.stringify(user));
     setCurrentUser(user);
     setIsAuthenticated(true);
   };
@@ -41,6 +28,12 @@ export default function App() {
     setCurrentUser(null);
     setIsAuthenticated(false);
   };
+
+  // Limpiar cualquier token viejo al cargar por primera vez para obligar a pasar por el Login
+  useEffect(() => {
+    localStorage.removeItem('solar_auth_token');
+    localStorage.removeItem('solar_auth_user');
+  }, []);
 
   // Synchronize HTML dark class
   useEffect(() => {
@@ -86,14 +79,13 @@ export default function App() {
     }
   };
 
-  // Si el usuario no ha iniciado sesión, mostrar pantalla de Login
+  // Si el usuario no ha iniciado sesión, mostrar siempre la pantalla de Login / Registro
   if (!isAuthenticated) {
     return <Login onLoginSuccess={handleLoginSuccess} />;
   }
 
   return (
     <div className={`min-h-screen ${darkMode ? 'dark bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'} transition-colors duration-200`}>
-
       {/* Top Bar Header */}
       <Header
         darkMode={darkMode}
@@ -107,14 +99,11 @@ export default function App() {
       />
 
       {/* Hero Section Inicial */}
-      <HeroSection
-        onStartCalculator={handleStartCalculator}
-      />
+      <HeroSection onStartCalculator={handleStartCalculator} />
 
       {/* Main Content Area: Se muestra en secuencia tras pulsar 'Calcular Mi Proyecto Ahora' */}
       {showCalculator && (
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 lg:py-14 space-y-14 animate-fadeIn">
-
           {/* Calculator Container: Cotizador Solar Oficial */}
           <section id="calculadora" className="scroll-mt-20 space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200 dark:border-slate-800">
@@ -134,11 +123,10 @@ export default function App() {
 
             <Cotizador2Calculator />
           </section>
-
         </main>
       )}
 
-      {/* Footer con Logo Oficial Ticline (Sin relleno, letras directas) */}
+      {/* Footer con Logo Oficial Ticline */}
       <footer className="border-t border-slate-200 dark:border-slate-800 bg-transparent py-8 text-xs mt-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-center">
           <img
@@ -148,7 +136,6 @@ export default function App() {
           />
         </div>
       </footer>
-
     </div>
   );
 }

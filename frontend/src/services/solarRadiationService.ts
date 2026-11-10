@@ -1,21 +1,7 @@
-/**
- * Servicio para consultar en tiempo real la radiación solar (Horas Sol Pico - HSP)
- * de cualquier coordenada de Colombia desde fuentes oficiales.
- *
- * Fuente: NASA POWER (Prediction Of Worldwide Energy Resources) - NASA Langley Research Center.
- * Parámetro ALLSKY_SFC_SW_DWN (Irradiación global horizontal, kWh/m²/día) en su
- * climatología de largo plazo. 1 kWh/m²/día equivale exactamente a 1 HSP.
- * Documentación: https://power.larc.nasa.gov/docs/services/api/temporal/climatology/
- */
-
 export interface SolarRadiationResult {
-  /** HSP promedio anual */
   hsp: number;
-  /** HSP del mes con menor radiación (época lluviosa) */
   hspMin: number;
-  /** HSP del mes con mayor radiación (época seca) */
   hspMax: number;
-  /** HSP mensual (ENE..DIC) */
   mensual: number[];
   fuente: string;
   lat: number;
@@ -23,14 +9,26 @@ export interface SolarRadiationResult {
 }
 
 const MESES = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
-
 const cache = new Map<string, SolarRadiationResult>();
 
 export async function fetchSolarRadiation(lat: number, lng: number): Promise<SolarRadiationResult> {
-  // NASA POWER tiene resolución de ~0.5°; redondeamos para aprovechar caché.
   const key = `${lat.toFixed(3)},${lng.toFixed(3)}`;
   const cached = cache.get(key);
   if (cached) return cached;
+
+  // 1. Consultar primero al Backend (/api/cotizaciones/radiacion)
+  try {
+    const backendRes = await fetch(`/api/cotizaciones/radiacion?lat=${lat}&lng=${lng}`);
+    if (backendRes.ok) {
+      const data = await backendRes.json();
+      if (typeof data.hsp === 'number' && data.hsp > 0) {
+        cache.set(key, data);
+        return data;
+      }
+    }
+  } catch {
+    // Respaldo directo a NASA POWER si el backend está apagado
+  }
 
   const url =
     'https://power.larc.nasa.gov/api/temporal/climatology/point' +
@@ -47,9 +45,10 @@ export async function fetchSolarRadiation(lat: number, lng: number): Promise<Sol
   const mensual = MESES.map((m) => serie[m]).filter((v) => typeof v === 'number' && v > 0);
   if (mensual.length === 0) throw new Error('NASA POWER no tiene datos para esta ubicación.');
 
-  const anual = typeof serie.ANN === 'number' && serie.ANN > 0
-    ? serie.ANN
-    : mensual.reduce((a, b) => a + b, 0) / mensual.length;
+  const anual =
+    typeof serie.ANN === 'number' && serie.ANN > 0
+      ? serie.ANN
+      : mensual.reduce((a, b) => a + b, 0) / mensual.length;
 
   const round2 = (v: number) => Math.round(v * 100) / 100;
   const result: SolarRadiationResult = {
@@ -64,4 +63,3 @@ export async function fetchSolarRadiation(lat: number, lng: number): Promise<Sol
   cache.set(key, result);
   return result;
 }
-
