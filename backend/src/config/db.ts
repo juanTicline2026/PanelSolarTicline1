@@ -2,6 +2,8 @@ import pg from 'pg';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { signJwt } from '../utils/jwt.js';
+import { hashPassword } from '../utils/passwordHash.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -9,7 +11,7 @@ const __dirname = path.dirname(__filename);
 // Cargar siempre backend/.env sin importar desde qué carpeta se ejecute npm
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
-const { Pool, Client } = pg;
+const { Pool } = pg;
 
 export interface UserRecord {
   id: string;
@@ -34,6 +36,17 @@ export interface CotizacionRecord {
   fechaCreacion: string;
 }
 
+export interface FormulaRecord {
+  id: number;
+  codigo: string;
+  nombre: string;
+  expresion_formula: string;
+  valor_numerico: number;
+  unidad: string;
+  celda_excel: string;
+  descripcion: string;
+}
+
 const dbHost = process.env.DB_HOST || 'localhost';
 const dbPort = Number(process.env.DB_PORT || 5432);
 const dbUser = process.env.DB_USER || 'postgres';
@@ -41,8 +54,7 @@ const dbPassword = process.env.DB_PASSWORD || '1022';
 const dbName = process.env.DB_NAME || 'postgres';
 const dbSsl = process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false;
 
-// Pool oficial de conexión a PostgreSQL
-export let pool = new Pool(
+export const pool = new Pool(
   process.env.DATABASE_URL
     ? {
         connectionString: process.env.DATABASE_URL,
@@ -61,16 +73,35 @@ export let pool = new Pool(
 export let isPostgresConnected = false;
 
 const SCHEMA_SQL = `
-  CREATE TABLE IF NOT EXISTS usuarios (
+  -- 1. Tabla de Usuarios con columna token_jwt y ultimo_login
+  CREATE TABLE IF NOT EXISTS public.usuarios (
     id SERIAL PRIMARY KEY,
     email VARCHAR(150) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
     nombre VARCHAR(150) NOT NULL,
     rol VARCHAR(80) DEFAULT 'Ingeniero de Proyectos',
+    token_jwt TEXT,
+    ultimo_login TIMESTAMP,
     fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP
   );
 
-  CREATE TABLE IF NOT EXISTS cotizaciones (
+  -- Asegurar que las columnas token_jwt y ultimo_login existan si la tabla ya había sido creada antes
+  ALTER TABLE public.usuarios ADD COLUMN IF NOT EXISTS token_jwt TEXT;
+  ALTER TABLE public.usuarios ADD COLUMN IF NOT EXISTS ultimo_login TIMESTAMP;
+
+  -- 2. Tabla de Historial de Sesiones y Tokens JWT emitidos
+  CREATE TABLE IF NOT EXISTS public.sesiones_jwt (
+    id SERIAL PRIMARY KEY,
+    usuario_id INTEGER REFERENCES public.usuarios(id) ON DELETE CASCADE,
+    email VARCHAR(150) NOT NULL,
+    token_jwt TEXT NOT NULL,
+    fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    fecha_expiracion TIMESTAMP NOT NULL,
+    activo BOOLEAN DEFAULT TRUE
+  );
+
+  -- 3. Tabla de Cotizaciones Generadas
+  CREATE TABLE IF NOT EXISTS public.cotizaciones (
     id SERIAL PRIMARY KEY,
     cliente VARCHAR(200) NOT NULL,
     proyecto VARCHAR(200) NOT NULL,
@@ -85,7 +116,51 @@ const SCHEMA_SQL = `
     fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP
   );
 
-  INSERT INTO usuarios (email, password_hash, nombre, rol)
+  -- Columnas para saber QUIÉN generó la cotización y guardar la cotización completa
+  ALTER TABLE public.cotizaciones ADD COLUMN IF NOT EXISTS usuario_id INTEGER REFERENCES public.usuarios(id) ON DELETE SET NULL;
+  ALTER TABLE public.cotizaciones ADD COLUMN IF NOT EXISTS usuario_nombre VARCHAR(150);
+  ALTER TABLE public.cotizaciones ADD COLUMN IF NOT EXISTS potencia_panel_w INTEGER;
+  ALTER TABLE public.cotizaciones ADD COLUMN IF NOT EXISTS radiacion_hsp NUMERIC(8, 2);
+  ALTER TABLE public.cotizaciones ADD COLUMN IF NOT EXISTS trm NUMERIC(12, 2);
+  ALTER TABLE public.cotizaciones ADD COLUMN IF NOT EXISTS area_requerida_m2 NUMERIC(10, 2);
+  ALTER TABLE public.cotizaciones ADD COLUMN IF NOT EXISTS produccion_mensual_kwh NUMERIC(12, 2);
+  ALTER TABLE public.cotizaciones ADD COLUMN IF NOT EXISTS retorno_anios NUMERIC(6, 2);
+  ALTER TABLE public.cotizaciones ADD COLUMN IF NOT EXISTS tir_pct NUMERIC(8, 4);
+  ALTER TABLE public.cotizaciones ADD COLUMN IF NOT EXISTS ahorro_co2_ton NUMERIC(10, 2);
+  ALTER TABLE public.cotizaciones ADD COLUMN IF NOT EXISTS datos_cotizacion JSONB;
+
+  -- 4. Tabla de Fórmulas del Cotizador Solar
+  CREATE TABLE IF NOT EXISTS public.formulas_sistema (
+    id SERIAL PRIMARY KEY,
+    codigo VARCHAR(80) UNIQUE NOT NULL,
+    nombre VARCHAR(160) NOT NULL,
+    expresion_formula TEXT NOT NULL,
+    valor_numerico NUMERIC(14, 6) NOT NULL DEFAULT 0,
+    unidad VARCHAR(50) NOT NULL,
+    celda_excel VARCHAR(60),
+    descripcion TEXT,
+    fecha_actualizacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  );
+
+  -- 5. Tabla Escalonada de Costos por Vatio (USD/Wp)
+  CREATE TABLE IF NOT EXISTS public.costos_vatio (
+    id SERIAL PRIMARY KEY,
+    wp_minimo INTEGER UNIQUE NOT NULL,
+    costo_usd_vatio NUMERIC(10, 4) NOT NULL,
+    celda_excel VARCHAR(50) DEFAULT 'Bases de Datos!L5:M36'
+  );
+
+  -- 6. Tabla de Radiación Solar por Departamento (HSP)
+  CREATE TABLE IF NOT EXISTS public.radiacion_departamentos (
+    id SERIAL PRIMARY KEY,
+    departamento VARCHAR(100) UNIQUE NOT NULL,
+    hsp_promedio NUMERIC(10, 4) NOT NULL,
+    hsp_minimo NUMERIC(10, 4) NOT NULL,
+    hsp_maximo NUMERIC(10, 4) NOT NULL
+  );
+
+  -- Insertar Usuarios iniciales
+  INSERT INTO public.usuarios (email, password_hash, nombre, rol)
   VALUES
     ('admin@ticline.co', '123456', 'ADMIN TICLINE', 'Administrador'),
     ('ingenieria@ticline.co', '123456', 'INGENIERÍA SOLAR', 'Ingeniero de Proyectos')
@@ -93,51 +168,52 @@ const SCHEMA_SQL = `
 `;
 
 /**
- * Inicializa la base de datos y las tablas en PostgreSQL automáticamente
+ * Inicializa la base de datos, tablas y genera tokens JWT en PostgreSQL si algún usuario no tiene uno
  */
 export async function initDatabase(): Promise<void> {
   try {
-    // 1. Si el usuario puso "posgres" pero la base por defecto de PostgreSQL es "postgres",
-    // verificamos primero con la base "postgres" y creamos la base si no existe.
-    if (!process.env.DATABASE_URL) {
-      const adminClient = new Client({
-        host: dbHost,
-        port: dbPort,
-        user: dbUser,
-        password: dbPassword,
-        database: 'postgres',
-        ssl: dbSsl,
-      });
-
-      try {
-        await adminClient.connect();
-        // Crear las tablas también en 'postgres' por si el usuario está viendo 'postgres' en HeidiSQL
-        await adminClient.query(SCHEMA_SQL);
-
-        if (dbName !== 'postgres') {
-          const checkDb = await adminClient.query(
-            'SELECT 1 FROM pg_database WHERE datname = $1',
-            [dbName]
-          );
-          if (checkDb.rowCount === 0) {
-            const safeDbName = dbName.replace(/[^a-zA-Z0-9_]/g, '');
-            await adminClient.query(`CREATE DATABASE "${safeDbName}"`);
-            console.log(`✅ Base de datos "${safeDbName}" creada automáticamente en PostgreSQL.`);
-          }
-        }
-      } catch {
-        // Ignorar si no se pudo conectar a 'postgres' directamente e intentar con el pool principal
-      } finally {
-        await adminClient.end().catch(() => {});
-      }
-    }
-
-    // 2. Conectar al pool configurado y asegurar que las tablas existan
     const client = await pool.connect();
     try {
       await client.query(SCHEMA_SQL);
+
+      // Encriptar automáticamente cualquier contraseña en texto plano que exista en public.usuarios
+      const plainUsers = await client.query(
+        "SELECT id, password_hash FROM public.usuarios WHERE password_hash NOT LIKE 'scrypt$%'"
+      );
+      for (const pu of plainUsers.rows) {
+        const encrypted = hashPassword(String(pu.password_hash));
+        await client.query('UPDATE public.usuarios SET password_hash = $1 WHERE id = $2', [
+          encrypted,
+          pu.id,
+        ]);
+      }
+
+      // Generar y guardar el token JWT en PostgreSQL para usuarios que aún tengan token_jwt en NULL
+      const secret = process.env.JWT_SECRET || 'ticline_solar_super_secret_jwt_key_2026';
+      const expiresHours = Number(process.env.JWT_EXPIRES_IN_HOURS || 8);
+      const usersWithoutToken = await client.query(
+        'SELECT id, email, nombre, rol FROM public.usuarios WHERE token_jwt IS NULL'
+      );
+
+      for (const u of usersWithoutToken.rows) {
+        const token = signJwt(
+          {
+            userId: String(u.id),
+            email: u.email,
+            nombre: u.nombre,
+            rol: u.rol,
+          },
+          secret,
+          expiresHours
+        );
+        await client.query(
+          'UPDATE public.usuarios SET token_jwt = $1, ultimo_login = CURRENT_TIMESTAMP WHERE id = $2',
+          [token, u.id]
+        );
+      }
+
       isPostgresConnected = true;
-      console.log(`✅ Conectado exitosamente a PostgreSQL (Base de datos: "${dbName}") y tablas creadas.`);
+      console.log(`✅ Conectado exitosamente a PostgreSQL (Base de datos: "${dbName}") y tokens JWT sincronizados.`);
     } finally {
       client.release();
     }
@@ -151,22 +227,5 @@ export async function initDatabase(): Promise<void> {
   }
 }
 
-// Almacenamiento de respaldo en memoria si el motor PostgreSQL está apagado
-export const usersStore: UserRecord[] = [
-  {
-    id: 'usr_1',
-    email: 'admin@ticline.co',
-    password: '123456',
-    nombre: 'ADMIN TICLINE',
-    rol: 'Administrador',
-  },
-  {
-    id: 'usr_2',
-    email: 'ingenieria@ticline.co',
-    password: '123456',
-    nombre: 'INGENIERÍA SOLAR',
-    rol: 'Ingeniero de Proyectos',
-  },
-];
-
+export const usersStore: UserRecord[] = [];
 export const cotizacionesStore: CotizacionRecord[] = [];

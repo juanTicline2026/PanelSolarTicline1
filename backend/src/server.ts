@@ -38,6 +38,6 @@ app.use('/api/cotizaciones', cotizacionesRoutes);
 
 initDatabase().then(() => {
   app.listen(PORT, () => {
-    console.log(`🚀 Backend Panel Solar activo en http://localhost:${5432}`);
+    console.log(`🚀 Backend Panel Solar activo en http://localhost:${PORT}`);
   });
 });

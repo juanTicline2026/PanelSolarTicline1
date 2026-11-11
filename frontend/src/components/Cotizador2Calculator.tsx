@@ -201,6 +201,8 @@ export function Cotizador2Calculator() {
   const r = backendResult || localResult;
   const sis = r.activo;
 
+  const [saveStatus, setSaveStatus] = useState<{ type: 'ok' | 'error'; text: string } | null>(null);
+
   const handleGeneratePdf = async () => {
     if (!inp.consumoKwh || !inp.trm) {
       alert('Por favor completa al menos el consumo (kWh) y TRM para generar la cotización.');
@@ -208,29 +210,9 @@ export function Cotizador2Calculator() {
     }
     try {
       setIsGeneratingPdf(true);
+      setSaveStatus(null);
 
-      // Guardar la cotización en PostgreSQL (public.cotizaciones)
-      const token = localStorage.getItem('ticline_jwt_token');
-      fetch('/api/cotizaciones', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({
-          cliente: clientName.trim() || 'Cliente Solar',
-          proyecto: projectName.trim() || 'Proyecto Solar',
-          ciudad: selectedCity.nombre,
-          departamento: selectedCity.departamento,
-          consumoKwh: inp.consumoKwh,
-          paneles: sis.paneles,
-          kwp: sis.kwp,
-          inversionCop: r.costoSolucionFinal,
-          ahorroMensualCop: r.ahorroMensualCop,
-        }),
-      }).catch(() => {});
-
-      await generateProposalPdf({
+      const pdfData = {
         projectName: projectName.trim() || 'Proyecto Solar',
         clientName: clientName.trim() || 'Cliente Solar',
         city: selectedCity.nombre,
@@ -257,7 +239,57 @@ export function Cotizador2Calculator() {
         retornoAnios: r.retornoAnios,
         tirPct: r.tir,
         flujoAnual: r.flujoAnual,
-      });
+      };
+
+      // 1. Guardar la cotización en PostgreSQL (public.cotizaciones) con el token JWT del usuario
+      const token =
+        sessionStorage.getItem('solar_auth_token') || localStorage.getItem('solar_auth_token');
+      try {
+        const saveRes = await fetch('/api/cotizaciones', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({
+            cliente: pdfData.clientName,
+            proyecto: pdfData.projectName,
+            ciudad: selectedCity.nombre,
+            departamento: selectedCity.departamento,
+            consumoKwh: inp.consumoKwh,
+            potenciaPanelW: pdfData.potenciaPanel,
+            paneles: sis.paneles,
+            kwp: sis.kwp,
+            areaRequeridaM2: sis.areaRequerida,
+            produccionMensualKwh: sis.produccionMensual,
+            radiacionHsp: r.radiacion,
+            trm: inp.trm,
+            inversionCop: r.costoSolucionFinal,
+            ahorroMensualCop: r.ahorroMensualCop,
+            retornoAnios: r.retornoAnios,
+            tirPct: r.tir,
+            ahorroCo2Ton: r.ahorroCo2,
+            datosCotizacion: pdfData, // cotización completa (incluye flujo de caja a 30 años)
+          }),
+        });
+        const saveData = await saveRes.json().catch(() => ({}));
+        if (saveRes.ok) {
+          setSaveStatus({
+            type: 'ok',
+            text: `Cotización #${saveData.cotizacion?.id} guardada en la base de datos a nombre de ${saveData.cotizacion?.usuarioNombre}.`,
+          });
+        } else {
+          setSaveStatus({
+            type: 'error',
+            text: saveData.message || 'No se pudo guardar la cotización en la base de datos.',
+          });
+        }
+      } catch {
+        setSaveStatus({ type: 'error', text: 'Backend no disponible: la cotización no se guardó en la base de datos.' });
+      }
+
+      // 2. Generar y descargar el PDF
+      await generateProposalPdf(pdfData);
     } catch (err) {
       console.error('Error generating proposal PDF:', err);
       alert('Ocurrió un error al generar el PDF. Por favor verifique los datos e intente nuevamente.');
@@ -926,6 +958,7 @@ export function Cotizador2Calculator() {
           projectName={projectName}
           clientName={clientName}
           isGeneratingPdf={isGeneratingPdf}
+          saveStatus={saveStatus}
           onGeneratePdf={handleGeneratePdf}
           onModifyData={() => setCurrentStep(1)}
         />

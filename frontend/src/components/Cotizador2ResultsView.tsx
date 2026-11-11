@@ -34,6 +34,7 @@ interface Props {
   projectName: string;
   clientName: string;
   isGeneratingPdf: boolean;
+  saveStatus?: { type: 'ok' | 'error'; text: string } | null;
   onGeneratePdf: () => void;
   onModifyData: () => void;
 }
@@ -45,6 +46,7 @@ export function Cotizador2ResultsView({
   projectName,
   clientName,
   isGeneratingPdf,
+  saveStatus,
   onGeneratePdf,
   onModifyData,
 }: Props) {
@@ -105,6 +107,19 @@ export function Cotizador2ResultsView({
             </button>
           </div>
         </div>
+
+        {saveStatus && (
+          <div
+            className={`relative mt-5 p-3 rounded-xl text-xs font-semibold border ${
+              saveStatus.type === 'ok'
+                ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300'
+                : 'bg-red-500/15 border-red-500/40 text-red-300'
+            }`}
+          >
+            {saveStatus.type === 'ok' ? '✅ ' : '⚠️ '}
+            {saveStatus.text}
+          </div>
+        )}
       </div>
 
       {/* 4 KPIs Gigantes */}

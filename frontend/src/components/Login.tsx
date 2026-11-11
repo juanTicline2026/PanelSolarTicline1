@@ -25,6 +25,18 @@ interface LoginProps {
   onLoginSuccess: (token: string, user: AuthUser) => void;
 }
 
+/** El correo debe tener "@" y terminar en ".com" (ej: usuario@gmail.com) */
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.com$/i;
+
+function validateEmail(email: string): string | null {
+  const value = email.trim();
+  if (!value) return 'El correo electrónico es obligatorio.';
+  if (!value.includes('@')) return 'El correo electrónico debe contener "@".';
+  if (!value.toLowerCase().endsWith('.com')) return 'El correo electrónico debe terminar en ".com".';
+  if (!EMAIL_REGEX.test(value)) return 'Formato de correo inválido. Ejemplo: usuario@dominio.com';
+  return null;
+}
+
 export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
   const [viewMode, setViewMode] = useState<'login' | 'register'>('login');
 
@@ -53,6 +65,12 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
 
     if (!email.trim() || !password.trim()) {
       setError('Por favor ingresa tu correo y contraseña.');
+      return;
+    }
+
+    const loginEmailError = validateEmail(email);
+    if (loginEmailError) {
+      setError(loginEmailError);
       return;
     }
 
@@ -99,6 +117,12 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
 
     if (!regNombre.trim() || !regEmail.trim() || !regPassword.trim()) {
       setError('Por favor completa todos los campos obligatorios.');
+      return;
+    }
+
+    const regEmailError = validateEmail(regEmail);
+    if (regEmailError) {
+      setError(regEmailError);
       return;
     }
 
@@ -219,7 +243,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="usuario@ticline.co"
+                    placeholder="usuario@dominio.com"
                     className="w-full rounded-xl border border-slate-700 bg-slate-950/80 pl-10 pr-4 py-2.5 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-400 transition-all"
                   />
                 </div>
@@ -327,7 +351,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                     required
                     value={regEmail}
                     onChange={(e) => setRegEmail(e.target.value)}
-                    placeholder="correo@ticline.co"
+                    placeholder="correo@dominio.com"
                     className="w-full rounded-xl border border-slate-700 bg-slate-950/80 pl-10 pr-4 py-2.5 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-400 transition-all"
                   />
                 </div>
