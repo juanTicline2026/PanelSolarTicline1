@@ -2,7 +2,7 @@ import pg from 'pg';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { signJwt } from '../utils/jwt.js';
+import { signJwt, inspectDatabaseJwtToken } from '../utils/jwt.js';
 import { hashPassword } from '../utils/passwordHash.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -55,7 +55,7 @@ const dbName = process.env.DB_NAME || 'postgres';
 const dbSsl = process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false;
 
 export const pool = new Pool(
-  process.env.DATABASE_URL
+  process.env.DATABASE_URL && process.env.DATABASE_URL.startsWith('postgres')
     ? {
         connectionString: process.env.DATABASE_URL,
         ssl: dbSsl,
@@ -88,6 +88,7 @@ const SCHEMA_SQL = `
   -- Asegurar que las columnas token_jwt y ultimo_login existan si la tabla ya había sido creada antes
   ALTER TABLE public.usuarios ADD COLUMN IF NOT EXISTS token_jwt TEXT;
   ALTER TABLE public.usuarios ADD COLUMN IF NOT EXISTS ultimo_login TIMESTAMP;
+  ALTER TABLE public.usuarios ADD COLUMN IF NOT EXISTS permisos JSONB DEFAULT '[]'::jsonb;
 
   -- 2. Tabla de Historial de Sesiones y Tokens JWT emitidos
   CREATE TABLE IF NOT EXISTS public.sesiones_jwt (
@@ -188,28 +189,38 @@ export async function initDatabase(): Promise<void> {
         ]);
       }
 
-      // Generar y guardar el token JWT en PostgreSQL para usuarios que aún tengan token_jwt en NULL
+      // Generar o renovar el token JWT en PostgreSQL para todos los usuarios (si está en NULL o expirado)
       const secret = process.env.JWT_SECRET || 'ticline_solar_super_secret_jwt_key_2026';
       const expiresHours = Number(process.env.JWT_EXPIRES_IN_HOURS || 8);
-      const usersWithoutToken = await client.query(
-        'SELECT id, email, nombre, rol FROM public.usuarios WHERE token_jwt IS NULL'
+      const allUsers = await client.query(
+        'SELECT id, email, nombre, rol, token_jwt FROM public.usuarios ORDER BY id ASC'
       );
 
-      for (const u of usersWithoutToken.rows) {
-        const token = signJwt(
-          {
-            userId: String(u.id),
-            email: u.email,
-            nombre: u.nombre,
-            rol: u.rol,
-          },
-          secret,
-          expiresHours
-        );
-        await client.query(
-          'UPDATE public.usuarios SET token_jwt = $1, ultimo_login = CURRENT_TIMESTAMP WHERE id = $2',
-          [token, u.id]
-        );
+      for (const u of allUsers.rows) {
+        const check = inspectDatabaseJwtToken(u.token_jwt, secret);
+        if (!u.token_jwt || !check.validSignature || check.isExpired) {
+          const token = signJwt(
+            {
+              userId: String(u.id),
+              email: u.email,
+              nombre: u.nombre,
+              rol: u.rol,
+            },
+            secret,
+            expiresHours
+          );
+          await client.query(
+            'UPDATE public.usuarios SET token_jwt = $1, ultimo_login = COALESCE(ultimo_login, CURRENT_TIMESTAMP) WHERE id = $2',
+            [token, u.id]
+          );
+          await client
+            .query(
+              `INSERT INTO public.sesiones_jwt (usuario_id, email, token_jwt, fecha_expiracion, activo)
+               VALUES ($1, $2, $3, CURRENT_TIMESTAMP + ($4 || ' hours')::interval, TRUE)`,
+              [u.id, u.email, token, String(expiresHours)]
+            )
+            .catch(() => {});
+        }
       }
 
       isPostgresConnected = true;

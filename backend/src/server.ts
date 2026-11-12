@@ -2,6 +2,7 @@ import express from 'express';
 import dotenv from 'dotenv';
 import authRoutes from './routes/authRoutes.ts';
 import cotizacionesRoutes from './routes/cotizacionesRoutes.ts';
+import usuariosRoutes from './routes/usuariosRoutes.ts';
 import { initDatabase, isPostgresConnected } from './config/db.ts';
 
 dotenv.config();
@@ -35,6 +36,7 @@ app.get('/api/health', (_req, res) => {
 
 app.use('/api/auth', authRoutes);
 app.use('/api/cotizaciones', cotizacionesRoutes);
+app.use('/api/usuarios', usuariosRoutes);
 
 initDatabase().then(() => {
   app.listen(PORT, () => {

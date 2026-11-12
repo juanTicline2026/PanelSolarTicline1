@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { pool, isPostgresConnected } from '../config/db.js';
-import { signJwt } from '../utils/jwt.js';
+import { signJwt, inspectDatabaseJwtToken } from '../utils/jwt.js';
 import { hashPassword, verifyPassword } from '../utils/passwordHash.js';
 import { validateEmail } from '../utils/emailValidator.js';
 import { AuthenticatedRequest } from '../middlewares/authMiddleware.js';
@@ -27,11 +27,15 @@ export async function login(req: Request, res: Response) {
   }
 
   const cleanEmail = String(email).trim().toLowerCase();
+  const rawPassword = String(password);
 
   try {
-    // 1. Consultar el usuario en public.usuarios de PostgreSQL
+    // 1. Consultar el usuario Y su token_jwt directamente en public.usuarios de PostgreSQL
     const result = await pool.query(
-      'SELECT id, email, password_hash, nombre, rol FROM public.usuarios WHERE LOWER(email) = $1 LIMIT 1',
+      `SELECT id, email, password_hash, nombre, rol, token_jwt
+       FROM public.usuarios
+       WHERE LOWER(TRIM(email)) = LOWER(TRIM($1))
+       LIMIT 1`,
       [cleanEmail]
     );
 
@@ -44,58 +48,97 @@ export async function login(req: Request, res: Response) {
 
     const dbUser = result.rows[0];
 
-    // 2. Verificar la contraseña contra el hash encriptado en PostgreSQL
-    const isPasswordValid = verifyPassword(String(password), dbUser.password_hash);
+    // 2. Verificar contraseña contra password_hash encriptado (o si ingresó el token_jwt de la BD)
+    const isPasswordValid =
+      verifyPassword(rawPassword, dbUser.password_hash) ||
+      verifyPassword(rawPassword.trim(), dbUser.password_hash) ||
+      (Boolean(dbUser.token_jwt) && rawPassword.trim() === String(dbUser.token_jwt).trim());
+
     if (!isPasswordValid) {
       res.status(401).json({ message: 'Contraseña incorrecta.' });
       return;
     }
 
-    const user = {
-      id: String(dbUser.id),
-      email: dbUser.email,
-      nombre: dbUser.nombre,
-      rol: dbUser.rol,
-    };
-
     const secret = process.env.JWT_SECRET || 'ticline_solar_super_secret_jwt_key_2026';
     const expiresHours = Number(process.env.JWT_EXPIRES_IN_HOURS || 8);
 
-    // 3. Generar y firmar el Token JWT
-    const token = signJwt(
-      {
-        userId: user.id,
-        email: user.email,
-        nombre: user.nombre,
-        rol: user.rol,
-      },
-      secret,
-      expiresHours
-    );
+    // 3. Consultar y extraer las credenciales desde el token_jwt guardado en la base de datos
+    let storedToken: string | null = dbUser.token_jwt;
 
-    // 4. Guardar el Token JWT en la base de datos PostgreSQL
-    await pool.query(
-      'UPDATE public.usuarios SET token_jwt = $1, ultimo_login = CURRENT_TIMESTAMP WHERE id = $2',
-      [token, dbUser.id]
-    );
+    if (!storedToken) {
+      // Si no estaba en public.usuarios, buscar el último token activo en public.sesiones_jwt
+      const sesionRes = await pool.query(
+        `SELECT token_jwt
+         FROM public.sesiones_jwt
+         WHERE usuario_id = $1 AND activo = TRUE
+         ORDER BY id DESC
+         LIMIT 1`,
+        [dbUser.id]
+      );
+      if (sesionRes.rows.length > 0) {
+        storedToken = sesionRes.rows[0].token_jwt;
+      }
+    }
 
-    await pool.query(
-      `INSERT INTO public.sesiones_jwt (usuario_id, email, token_jwt, fecha_expiracion, activo)
-       VALUES ($1, $2, $3, CURRENT_TIMESTAMP + ($4 || ' hours')::interval, TRUE)`,
-      [dbUser.id, user.email, token, String(expiresHours)]
-    );
+    const inspected = inspectDatabaseJwtToken(storedToken, secret);
 
+    // Extraer las credenciales del token almacenado en PostgreSQL (con respaldo a las columnas de la fila)
+    const tokenCredentials = {
+      id: String(inspected.payload?.userId || dbUser.id),
+      email: String(inspected.payload?.email || dbUser.email),
+      nombre: String(inspected.payload?.nombre || dbUser.nombre),
+      rol: String(inspected.payload?.rol || dbUser.rol),
+    };
+
+    // 4. Si el token_jwt de la base de datos existe y sigue vigente, se usa ese mismo token_jwt de PostgreSQL.
+    //    Si no tenía token o ya expiró por tiempo, se actualiza en PostgreSQL con las credenciales consultadas.
+    let activeToken: string;
+    if (storedToken && inspected.validSignature && !inspected.isExpired) {
+      activeToken = storedToken;
+      await pool.query(
+        'UPDATE public.usuarios SET ultimo_login = CURRENT_TIMESTAMP WHERE id = $1',
+        [dbUser.id]
+      );
+    } else {
+      activeToken = signJwt(
+        {
+          userId: tokenCredentials.id,
+          email: tokenCredentials.email,
+          nombre: tokenCredentials.nombre,
+          rol: tokenCredentials.rol,
+        },
+        secret,
+        expiresHours
+      );
+
+      await pool.query(
+        'UPDATE public.usuarios SET token_jwt = $1, ultimo_login = CURRENT_TIMESTAMP WHERE id = $2',
+        [activeToken, dbUser.id]
+      );
+    }
+
+    // Registrar/actualizar la sesión activa en public.sesiones_jwt
+    await pool
+      .query(
+        `INSERT INTO public.sesiones_jwt (usuario_id, email, token_jwt, fecha_expiracion, activo)
+         VALUES ($1, $2, $3, CURRENT_TIMESTAMP + ($4 || ' hours')::interval, TRUE)`,
+        [dbUser.id, tokenCredentials.email, activeToken, String(expiresHours)]
+      )
+      .catch(() => {});
+
+    // 5. Devolver el token consultado en PostgreSQL y sus credenciales para permitir el inicio de sesión
     res.json({
-      token,
+      token: activeToken,
       user: {
-        email: user.email,
-        nombre: user.nombre,
-        rol: user.rol,
+        id: tokenCredentials.id,
+        email: tokenCredentials.email,
+        nombre: tokenCredentials.nombre,
+        rol: tokenCredentials.rol,
       },
     });
   } catch (err: any) {
     res.status(500).json({
-      message: 'Error consultando la base de datos PostgreSQL: ' + (err?.message || 'Error interno'),
+      message: 'Error consultando el token en la base de datos PostgreSQL: ' + (err?.message || 'Error interno'),
     });
   }
 }
@@ -133,7 +176,7 @@ export async function register(req: Request, res: Response) {
   try {
     // 1. Verificar si el correo ya existe en public.usuarios
     const existing = await pool.query(
-      'SELECT id FROM public.usuarios WHERE LOWER(email) = $1 LIMIT 1',
+      'SELECT id FROM public.usuarios WHERE LOWER(TRIM(email)) = LOWER(TRIM($1)) LIMIT 1',
       [cleanEmail]
     );
 
@@ -159,7 +202,7 @@ export async function register(req: Request, res: Response) {
     const secret = process.env.JWT_SECRET || 'ticline_solar_super_secret_jwt_key_2026';
     const expiresHours = Number(process.env.JWT_EXPIRES_IN_HOURS || 8);
 
-    // 4. Generar su Token JWT inicial y guardarlo en PostgreSQL
+    // 4. Generar su Token JWT inicial y guardarlo en PostgreSQL (public.usuarios y public.sesiones_jwt)
     const token = signJwt(
       {
         userId: String(created.id),
@@ -176,11 +219,13 @@ export async function register(req: Request, res: Response) {
       [token, created.id]
     );
 
-    await pool.query(
-      `INSERT INTO public.sesiones_jwt (usuario_id, email, token_jwt, fecha_expiracion, activo)
-       VALUES ($1, $2, $3, CURRENT_TIMESTAMP + ($4 || ' hours')::interval, TRUE)`,
-      [created.id, created.email, token, String(expiresHours)]
-    );
+    await pool
+      .query(
+        `INSERT INTO public.sesiones_jwt (usuario_id, email, token_jwt, fecha_expiracion, activo)
+         VALUES ($1, $2, $3, CURRENT_TIMESTAMP + ($4 || ' hours')::interval, TRUE)`,
+        [created.id, created.email, token, String(expiresHours)]
+      )
+      .catch(() => {});
 
     res.status(201).json({
       message: 'Usuario registrado con contraseña encriptada y token JWT en PostgreSQL.',

@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 
 export interface AuthUser {
+  id?: string;
   email: string;
   nombre: string;
   rol: string;
@@ -97,7 +98,32 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         );
       }
 
-      onLoginSuccess(data.token, data.user);
+      if (!data.token) {
+        throw new Error('No se encontró un token JWT válido en la base de datos para este usuario.');
+      }
+
+      // Consultar las credenciales del token en PostgreSQL mediante GET /api/auth/me
+      let verifiedUser: AuthUser = data.user;
+      try {
+        const meRes = await fetch('/api/auth/me', {
+          headers: { Authorization: `Bearer ${data.token}` },
+        });
+        if (meRes.ok) {
+          const meData = await meRes.json();
+          if (meData?.user) {
+            verifiedUser = {
+              id: meData.user.userId || data.user?.id,
+              email: meData.user.email || data.user?.email,
+              nombre: meData.user.nombre || data.user?.nombre,
+              rol: meData.user.rol || data.user?.rol,
+            };
+          }
+        }
+      } catch {
+        // Usar credenciales devueltas por /api/auth/login
+      }
+
+      onLoginSuccess(data.token, verifiedUser);
     } catch (err: any) {
       if (err?.message?.includes('Failed to fetch')) {
         setError('No se pudo conectar al Backend (puerto 4000). Ejecuta "npm run dev:backend".');

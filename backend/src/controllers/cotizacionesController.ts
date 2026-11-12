@@ -207,3 +207,142 @@ export async function createCotizacion(req: AuthenticatedRequest, res: Response)
     res.status(500).json({ message: 'Error guardando la cotización: ' + (err?.message || '') });
   }
 }
+
+/**
+ * PUT /api/cotizaciones/:id
+ * Actualiza una cotización existente (CRUD Update)
+ */
+export async function updateCotizacion(req: AuthenticatedRequest, res: Response) {
+  if (!isPostgresConnected) {
+    res.status(503).json({ message: 'No hay conexión con PostgreSQL.' });
+    return;
+  }
+
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id)) {
+    res.status(400).json({ message: 'ID de cotización inválido.' });
+    return;
+  }
+
+  const usuarioId = Number(req.user?.userId);
+  const esAdmin = req.user?.rol === 'Administrador';
+
+  try {
+    // 1. Verificar existencia y permisos
+    const checkRes = await pool.query('SELECT id, usuario_id FROM public.cotizaciones WHERE id = $1', [id]);
+    const existing = checkRes.rows[0];
+    if (!existing) {
+      res.status(404).json({ message: 'Cotización no encontrada.' });
+      return;
+    }
+
+    if (!esAdmin && String(existing.usuario_id) !== String(usuarioId)) {
+      res.status(403).json({ message: 'No tienes permisos para modificar esta cotización.' });
+      return;
+    }
+
+    const b = req.body || {};
+    const num = (v: unknown, fallback: number = 0) => (Number.isFinite(Number(v)) ? Number(v) : fallback);
+
+    const result = await pool.query(
+      `UPDATE public.cotizaciones SET
+        cliente = COALESCE($1, cliente),
+        proyecto = COALESCE($2, proyecto),
+        ciudad = COALESCE($3, ciudad),
+        departamento = COALESCE($4, departamento),
+        consumo_kwh = COALESCE($5, consumo_kwh),
+        potencia_panel_w = COALESCE($6, potencia_panel_w),
+        paneles = COALESCE($7, paneles),
+        kwp = COALESCE($8, kwp),
+        inversion_cop = COALESCE($9, inversion_cop),
+        ahorro_mensual_cop = COALESCE($10, ahorro_mensual_cop),
+        retorno_anios = COALESCE($11, retorno_anios),
+        tir_pct = COALESCE($12, tir_pct)
+      WHERE id = $13
+      RETURNING
+        id,
+        usuario_id AS "usuarioId",
+        usuario_nombre AS "usuarioNombre",
+        creado_por AS "creadoPor",
+        cliente,
+        proyecto,
+        ciudad,
+        departamento,
+        consumo_kwh AS "consumoKwh",
+        potencia_panel_w AS "potenciaPanelW",
+        paneles,
+        kwp,
+        inversion_cop AS "inversionCop",
+        ahorro_mensual_cop AS "ahorroMensualCop",
+        retorno_anios AS "retornoAnios",
+        tir_pct AS "tirPct",
+        fecha_creacion AS "fechaCreacion"`,
+      [
+        b.cliente ? String(b.cliente) : null,
+        b.proyecto ? String(b.proyecto) : null,
+        b.ciudad ? String(b.ciudad) : null,
+        b.departamento ? String(b.departamento) : null,
+        b.consumoKwh !== undefined ? num(b.consumoKwh) : null,
+        b.potenciaPanelW !== undefined ? Math.round(num(b.potenciaPanelW)) : null,
+        b.paneles !== undefined ? Math.round(num(b.paneles)) : null,
+        b.kwp !== undefined ? num(b.kwp) : null,
+        b.inversionCop !== undefined ? num(b.inversionCop) : null,
+        b.ahorroMensualCop !== undefined ? num(b.ahorroMensualCop) : null,
+        b.retornoAnios !== undefined ? num(b.retornoAnios) : null,
+        b.tirPct !== undefined ? num(b.tirPct) : null,
+        id,
+      ]
+    );
+
+    res.json({
+      message: 'Cotización actualizada exitosamente.',
+      cotizacion: result.rows[0],
+    });
+  } catch (err: any) {
+    res.status(500).json({ message: 'Error actualizando la cotización: ' + (err?.message || '') });
+  }
+}
+
+/**
+ * DELETE /api/cotizaciones/:id
+ * Elimina una cotización existente (CRUD Delete)
+ */
+export async function deleteCotizacion(req: AuthenticatedRequest, res: Response) {
+  if (!isPostgresConnected) {
+    res.status(503).json({ message: 'No hay conexión con PostgreSQL.' });
+    return;
+  }
+
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id)) {
+    res.status(400).json({ message: 'ID de cotización inválido.' });
+    return;
+  }
+
+  const usuarioId = Number(req.user?.userId);
+  const esAdmin = req.user?.rol === 'Administrador';
+
+  try {
+    // 1. Verificar existencia y permisos
+    const checkRes = await pool.query('SELECT id, usuario_id, cliente, proyecto FROM public.cotizaciones WHERE id = $1', [id]);
+    const existing = checkRes.rows[0];
+    if (!existing) {
+      res.status(404).json({ message: 'Cotización no encontrada.' });
+      return;
+    }
+
+    if (!esAdmin && String(existing.usuario_id) !== String(usuarioId)) {
+      res.status(403).json({ message: 'No tienes permisos para eliminar esta cotización.' });
+      return;
+    }
+
+    await pool.query('DELETE FROM public.cotizaciones WHERE id = $1', [id]);
+
+    res.json({
+      message: `Cotización #${id} (${existing.cliente} - ${existing.proyecto}) eliminada correctamente.`,
+      id,
+    });
+  } catch (err: any) {
+    res.status(500).json({ message: 'Error eliminando cotización: ' + (err?.message || '') });
+  }
+}

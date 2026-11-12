@@ -77,3 +77,37 @@ export function verifyJwtToken(token: string, secret: string): JwtPayload {
   return payload;
 }
 
+/**
+ * Lee y valida las credenciales contenidas en el token_jwt almacenado en PostgreSQL (public.usuarios).
+ * Devuelve las credenciales del token y si sigue vigente o requiere renovación de fecha de expiración.
+ */
+export function inspectDatabaseJwtToken(
+  token: string | null | undefined,
+  secret: string
+): { validSignature: boolean; isExpired: boolean; payload: JwtPayload | null } {
+  if (!token || typeof token !== 'string') {
+    return { validSignature: false, isExpired: true, payload: null };
+  }
+
+  const parts = token.trim().split('.');
+  if (parts.length !== 3) {
+    return { validSignature: false, isExpired: true, payload: null };
+  }
+
+  try {
+    const [encodedHeader, encodedPayload, encodedSignature] = parts;
+    const data = `${encodedHeader}.${encodedPayload}`;
+    const expectedSignature = base64UrlEncode(
+      crypto.createHmac('sha256', secret).update(data).digest()
+    );
+
+    const validSignature = encodedSignature === expectedSignature;
+    const payload = JSON.parse(base64UrlDecode(encodedPayload)) as JwtPayload;
+    const now = Math.floor(Date.now() / 1000);
+    const isExpired = Boolean(payload.exp && now >= payload.exp);
+
+    return { validSignature, isExpired, payload };
+  } catch {
+    return { validSignature: false, isExpired: true, payload: null };
+  }
+}

@@ -3,6 +3,8 @@ import {
   getCotizaciones,
   getCotizacionById,
   createCotizacion,
+  updateCotizacion,
+  deleteCotizacion,
   getFormulas,
   calcularCotizacion,
   getTrm,
@@ -17,9 +19,11 @@ router.get('/radiacion', getRadiacion);
 router.get('/formulas', getFormulas);
 router.post('/calcular', calcularCotizacion);
 
-// Rutas protegidas con JWT: guardar y consultar cotizaciones
+// Rutas protegidas con JWT: CRUD completo de cotizaciones
 router.get('/', verifyJwt, getCotizaciones);
 router.get('/:id', verifyJwt, getCotizacionById);
 router.post('/', verifyJwt, createCotizacion);
+router.put('/:id', verifyJwt, updateCotizacion);
+router.delete('/:id', verifyJwt, deleteCotizacion);
 
 export default router;
