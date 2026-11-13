@@ -22,7 +22,9 @@ import {
   Clock,
   Leaf,
   Layers,
+  ShieldAlert,
 } from 'lucide-react';
+import { hasPermission, PermissionUser } from '../../utils/permissions';
 
 export interface CotizacionItem {
   id: number;
@@ -51,15 +53,17 @@ export interface CotizacionItem {
 }
 
 interface Props {
-  currentUser?: { email: string; nombre: string; rol?: string } | null;
+  currentUser?: PermissionUser | null;
 }
 
-const nf = (v: number, d = 0) =>
-  Number.isFinite(v) && v > 0
-    ? new Intl.NumberFormat('es-CO', { minimumFractionDigits: d, maximumFractionDigits: d }).format(v)
+const nf = (v: number | string | undefined | null, d = 0) => {
+  const num = Number(v);
+  return Number.isFinite(num) && num > 0
+    ? new Intl.NumberFormat('es-CO', { minimumFractionDigits: d, maximumFractionDigits: d }).format(num)
     : '0';
+};
 
-const cop = (v: number) => `$ ${nf(v)} COP`;
+const cop = (v: number | string | undefined | null) => `$ ${nf(v)} COP`;
 
 export const GestionCotizacionesView: React.FC<Props> = ({ currentUser }) => {
   const [cotizaciones, setCotizaciones] = useState<CotizacionItem[]>([]);
@@ -93,11 +97,15 @@ export const GestionCotizacionesView: React.FC<Props> = ({ currentUser }) => {
   const [guardando, setGuardando] = useState(false);
 
   const esAdmin = currentUser?.rol?.toLowerCase().includes('admin') ?? false;
+  const canViewCotizaciones = hasPermission(currentUser, 'cotizaciones:ver');
+  const canCreateCotizaciones = hasPermission(currentUser, 'cotizaciones:crear');
+  const canDeleteCotizaciones = hasPermission(currentUser, 'cotizaciones:eliminar');
 
   const getAuthToken = () =>
     sessionStorage.getItem('solar_auth_token') || localStorage.getItem('solar_auth_token');
 
   const cargarCotizaciones = () => {
+    if (!canViewCotizaciones) return;
     const token = getAuthToken();
     setLoading(true);
     setError(null);
@@ -128,7 +136,7 @@ export const GestionCotizacionesView: React.FC<Props> = ({ currentUser }) => {
 
   useEffect(() => {
     cargarCotizaciones();
-  }, []);
+  }, [canViewCotizaciones]);
 
   // Limpiar mensaje de éxito después de 4s
   useEffect(() => {
@@ -292,6 +300,24 @@ export const GestionCotizacionesView: React.FC<Props> = ({ currentUser }) => {
   const totalInversion = cotizaciones.reduce((acc, c) => acc + (Number(c.inversionCop) || 0), 0);
   const totalAhorroMensual = cotizaciones.reduce((acc, c) => acc + (Number(c.ahorroMensualCop) || 0), 0);
 
+  if (!canViewCotizaciones) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 px-4 text-center space-y-4 animate-fadeIn">
+        <div className="w-16 h-16 rounded-3xl bg-red-500/10 text-red-500 flex items-center justify-center border border-red-500/20">
+          <ShieldAlert className="w-8 h-8" />
+        </div>
+        <div className="space-y-1">
+          <h2 className="text-xl font-bold text-slate-900 dark:text-white">
+            Acceso Restringido a Cotizaciones
+          </h2>
+          <p className="text-xs text-slate-400 max-w-md">
+            No tienes el permiso <strong>Ver historial de cotizaciones (cotizaciones:ver)</strong> habilitado. Solicítalo al administrador en Roles y Permisos.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 animate-fadeIn">
       {/* Alertas Globales */}
@@ -347,14 +373,16 @@ export const GestionCotizacionesView: React.FC<Props> = ({ currentUser }) => {
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-emerald-400' : ''}`} />
           </button>
 
-          <button
-            type="button"
-            onClick={handleOpenCrear}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm text-slate-950 bg-gradient-to-r from-emerald-400 via-teal-300 to-emerald-400 hover:from-emerald-300 hover:to-teal-200 shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/35 hover:scale-105 active:scale-95 transition-all cursor-pointer"
-          >
-            <Plus className="w-4 h-4 stroke-[2.5]" />
-            <span>Nueva Cotización</span>
-          </button>
+          {canCreateCotizaciones && (
+            <button
+              type="button"
+              onClick={handleOpenCrear}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm text-slate-950 bg-gradient-to-r from-emerald-400 via-teal-300 to-emerald-400 hover:from-emerald-300 hover:to-teal-200 shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/35 hover:scale-105 active:scale-95 transition-all cursor-pointer"
+            >
+              <Plus className="w-4 h-4 stroke-[2.5]" />
+              <span>Nueva Cotización</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -515,7 +543,7 @@ export const GestionCotizacionesView: React.FC<Props> = ({ currentUser }) => {
                       <div className="font-bold text-emerald-600 dark:text-emerald-400">
                         {cop(c.ahorroMensualCop)}
                       </div>
-                      {c.retornoAnios ? (
+                      {Number(c.retornoAnios) > 0 ? (
                         <div className="text-[10px] text-slate-400">
                           Retorno: {nf(c.retornoAnios, 1)} años
                         </div>
@@ -556,24 +584,28 @@ export const GestionCotizacionesView: React.FC<Props> = ({ currentUser }) => {
                         </button>
 
                         {/* U: Update */}
-                        <button
-                          type="button"
-                          onClick={() => handleOpenEditar(c)}
-                          title="Editar cotización"
-                          className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:text-teal-500 hover:border-teal-500/40 hover:bg-teal-500/10 transition-colors"
-                        >
-                          <Edit className="w-3.5 h-3.5" />
-                        </button>
+                        {canCreateCotizaciones && (
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEditar(c)}
+                            title="Editar cotización"
+                            className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:text-teal-500 hover:border-teal-500/40 hover:bg-teal-500/10 transition-colors"
+                          >
+                            <Edit className="w-3.5 h-3.5" />
+                          </button>
+                        )}
 
                         {/* D: Delete */}
-                        <button
-                          type="button"
-                          onClick={() => setModalEliminar(c)}
-                          title="Eliminar cotización"
-                          className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-800 text-slate-500 hover:text-red-500 hover:border-red-500/40 hover:bg-red-500/10 transition-colors"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                        {canDeleteCotizaciones && (
+                          <button
+                            type="button"
+                            onClick={() => setModalEliminar(c)}
+                            title="Eliminar cotización"
+                            className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-800 text-slate-500 hover:text-red-500 hover:border-red-500/40 hover:bg-red-500/10 transition-colors"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -656,7 +688,7 @@ export const GestionCotizacionesView: React.FC<Props> = ({ currentUser }) => {
                 </div>
               </div>
 
-              {modalVer.retornoAnios ? (
+              {Number(modalVer.retornoAnios) > 0 ? (
                 <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
                   <div className="text-slate-400">Retorno de Inversión</div>
                   <div className="font-bold text-sm text-slate-900 dark:text-slate-100 mt-1">
@@ -665,7 +697,7 @@ export const GestionCotizacionesView: React.FC<Props> = ({ currentUser }) => {
                 </div>
               ) : null}
 
-              {modalVer.tirPct ? (
+              {Number(modalVer.tirPct) > 0 ? (
                 <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
                   <div className="text-slate-400">TIR Estimada</div>
                   <div className="font-bold text-sm text-teal-500 mt-1">
@@ -674,7 +706,7 @@ export const GestionCotizacionesView: React.FC<Props> = ({ currentUser }) => {
                 </div>
               ) : null}
 
-              {modalVer.consumoKwh ? (
+              {Number(modalVer.consumoKwh) > 0 ? (
                 <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
                   <div className="text-slate-400">Consumo Mensual Base</div>
                   <div className="font-bold text-sm text-slate-900 dark:text-slate-100 mt-1">

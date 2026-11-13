@@ -27,6 +27,7 @@ import { COLOMBIAN_CITIES, ColombianCity } from '../constants/colombianCities';
 import { ColombiaMapPicker, MapLocation } from './ColombiaMapPicker';
 import { Cotizador2LiveSummary } from './Cotizador2LiveSummary';
 import { Cotizador2ResultsView } from './Cotizador2ResultsView';
+import { hasPermission, PermissionUser } from '../utils/permissions';
 
 const nf = (v: number, d = 0) =>
   Number.isFinite(v) && v > 0
@@ -64,7 +65,9 @@ export const SMART_INITIAL_INPUTS: Cotizador2FormInputs = {
   tasaImpositiva: 0.35,
 };
 
-export function Cotizador2Calculator() {
+export function Cotizador2Calculator({ currentUser }: { currentUser?: PermissionUser | null }) {
+  const canCreateQuote = currentUser ? hasPermission(currentUser, 'cotizaciones:crear') : true;
+  const canDownloadPdf = currentUser ? hasPermission(currentUser, 'cotizaciones:descargar_pdf') : true;
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [inp, setInp] = useState<Cotizador2FormInputs>(SMART_INITIAL_INPUTS);
   const [projectName, setProjectName] = useState('');
@@ -305,6 +308,19 @@ export function Cotizador2Calculator() {
     { num: 4, title: 'Finanzas y Ley 1715', desc: 'TRM y Beneficios' },
     { num: 5, title: 'Estudio y Propuesta', desc: 'Resultados y PDF' },
   ];
+
+  if (!canCreateQuote) {
+    return (
+      <div className="rounded-3xl border border-red-500/30 bg-white/95 dark:bg-slate-900/90 p-10 text-center space-y-3 shadow-xl">
+        <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+          Acceso Restringido al Cotizador
+        </h3>
+        <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto">
+          No tienes el permiso <strong>Crear y calcular cotizaciones (cotizaciones:crear)</strong> habilitado. Solicítalo al administrador en Roles y Permisos.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -958,6 +974,7 @@ export function Cotizador2Calculator() {
           projectName={projectName}
           clientName={clientName}
           isGeneratingPdf={isGeneratingPdf}
+          canDownloadPdf={canDownloadPdf}
           saveStatus={saveStatus}
           onGeneratePdf={handleGeneratePdf}
           onModifyData={() => setCurrentStep(1)}

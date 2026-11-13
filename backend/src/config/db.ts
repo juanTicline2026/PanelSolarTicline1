@@ -161,11 +161,14 @@ const SCHEMA_SQL = `
   );
 
   -- Insertar Usuarios iniciales
-  INSERT INTO public.usuarios (email, password_hash, nombre, rol)
+  INSERT INTO public.usuarios (email, password_hash, nombre, rol, permisos)
   VALUES
-    ('admin@ticline.co', '123456', 'ADMIN TICLINE', 'Administrador'),
-    ('ingenieria@ticline.co', '123456', 'INGENIERÍA SOLAR', 'Ingeniero de Proyectos')
-  ON CONFLICT (email) DO NOTHING;
+    ('admin@ticline.com', 'Admin2026*', 'Administrador Ticline', 'Administrador', '["CALCULAR_PROYECTO","DESCARGAR_COTIZACION_PDF","VER_HISTORIAL_COTIZACIONES","MODIFICAR_FORMULAS","ADMINISTRAR_USUARIOS","EXPORTAR_REPORTES","AJUSTAR_PARAMETROS_FINANCIEROS","APLICAR_DESCUENTOS","AUDITORIA_SISTEMA"]'::jsonb),
+    ('admin@ticline.co', '123456', 'ADMIN TICLINE', 'Administrador', '["CALCULAR_PROYECTO","DESCARGAR_COTIZACION_PDF","VER_HISTORIAL_COTIZACIONES","MODIFICAR_FORMULAS","ADMINISTRAR_USUARIOS","EXPORTAR_REPORTES","AJUSTAR_PARAMETROS_FINANCIEROS","APLICAR_DESCUENTOS","AUDITORIA_SISTEMA"]'::jsonb),
+    ('ingenieria@ticline.com', '123456', 'INGENIERÍA SOLAR', 'Ingeniero de Proyectos', '["CALCULAR_PROYECTO","DESCARGAR_COTIZACION_PDF","VER_HISTORIAL_COTIZACIONES","MODIFICAR_FORMULAS","EXPORTAR_REPORTES","AJUSTAR_PARAMETROS_FINANCIEROS"]'::jsonb)
+  ON CONFLICT (email) DO UPDATE SET
+    rol = EXCLUDED.rol,
+    permisos = COALESCE(public.usuarios.permisos, EXCLUDED.permisos);
 `;
 
 /**
@@ -176,6 +179,32 @@ export async function initDatabase(): Promise<void> {
     const client = await pool.connect();
     try {
       await client.query(SCHEMA_SQL);
+
+      // Asegurar cuenta de Administrador oficial con email .com y permisos completos
+      const adminEmail = 'admin@ticline.com';
+      const adminPass = 'Admin2026*';
+      const adminHash = hashPassword(adminPass);
+      const todosPermisos = JSON.stringify([
+        'CALCULAR_PROYECTO',
+        'DESCARGAR_COTIZACION_PDF',
+        'VER_HISTORIAL_COTIZACIONES',
+        'MODIFICAR_FORMULAS',
+        'ADMINISTRAR_USUARIOS',
+        'EXPORTAR_REPORTES',
+        'AJUSTAR_PARAMETROS_FINANCIEROS',
+        'APLICAR_DESCUENTOS',
+        'AUDITORIA_SISTEMA',
+      ]);
+
+      await client.query(
+        `INSERT INTO public.usuarios (email, password_hash, nombre, rol, permisos)
+         VALUES ($1, $2, 'Administrador Ticline', 'Administrador', $3::jsonb)
+         ON CONFLICT (email) DO UPDATE SET
+           password_hash = $2,
+           rol = 'Administrador',
+           permisos = $3::jsonb`,
+        [adminEmail, adminHash, todosPermisos]
+      );
 
       // Encriptar automáticamente cualquier contraseña en texto plano que exista en public.usuarios
       const plainUsers = await client.query(

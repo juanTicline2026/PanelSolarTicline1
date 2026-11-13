@@ -34,6 +34,7 @@ interface Props {
   projectName: string;
   clientName: string;
   isGeneratingPdf: boolean;
+  canDownloadPdf?: boolean;
   saveStatus?: { type: 'ok' | 'error'; text: string } | null;
   onGeneratePdf: () => void;
   onModifyData: () => void;
@@ -46,6 +47,7 @@ export function Cotizador2ResultsView({
   projectName,
   clientName,
   isGeneratingPdf,
+  canDownloadPdf = true,
   saveStatus,
   onGeneratePdf,
   onModifyData,
@@ -77,25 +79,31 @@ export function Cotizador2ResultsView({
           </div>
 
           <div className="flex flex-col sm:flex-row gap-3">
-            <button
-              type="button"
-              id="btn-generar-pdf-cotizacion"
-              onClick={onGeneratePdf}
-              disabled={isGeneratingPdf}
-              className="px-6 py-4 rounded-2xl bg-gradient-to-r from-emerald-400 via-teal-300 to-emerald-400 hover:from-emerald-300 hover:to-teal-200 text-slate-950 font-black text-sm shadow-xl shadow-emerald-500/30 hover:shadow-emerald-500/50 transition-all transform hover:scale-105 active:scale-95 flex items-center justify-center gap-2.5 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
-            >
-              {isGeneratingPdf ? (
-                <>
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                  <span>Generando Propuesta Oficial (8 Páginas)...</span>
-                </>
-              ) : (
-                <>
-                  <FileDown className="w-5 h-5 stroke-[2.5]" />
-                  <span>Descargar Cotización Oficial en PDF</span>
-                </>
-              )}
-            </button>
+            {canDownloadPdf ? (
+              <button
+                type="button"
+                id="btn-generar-pdf-cotizacion"
+                onClick={onGeneratePdf}
+                disabled={isGeneratingPdf}
+                className="px-6 py-4 rounded-2xl bg-gradient-to-r from-emerald-400 via-teal-300 to-emerald-400 hover:from-emerald-300 hover:to-teal-200 text-slate-950 font-black text-sm shadow-xl shadow-emerald-500/30 hover:shadow-emerald-500/50 transition-all transform hover:scale-105 active:scale-95 flex items-center justify-center gap-2.5 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
+              >
+                {isGeneratingPdf ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <span>Generando Propuesta Oficial (8 Páginas)...</span>
+                  </>
+                ) : (
+                  <>
+                    <FileDown className="w-5 h-5 stroke-[2.5]" />
+                    <span>Descargar Cotización Oficial en PDF</span>
+                  </>
+                )}
+              </button>
+            ) : (
+              <div className="px-4 py-3 rounded-2xl bg-slate-800/80 border border-amber-500/30 text-amber-300 text-xs font-semibold flex items-center gap-2">
+                <span>Sin permiso para descargar PDF (cotizaciones:descargar_pdf)</span>
+              </div>
+            )}
 
             <button
               type="button"

@@ -13,6 +13,9 @@ import {
   UserPlus,
   User,
   Briefcase,
+  Zap,
+  TrendingDown,
+  Sun,
 } from 'lucide-react';
 
 export interface AuthUser {
@@ -20,6 +23,7 @@ export interface AuthUser {
   email: string;
   nombre: string;
   rol: string;
+  permisos?: string[];
 }
 
 interface LoginProps {
@@ -116,6 +120,11 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
               email: meData.user.email || data.user?.email,
               nombre: meData.user.nombre || data.user?.nombre,
               rol: meData.user.rol || data.user?.rol,
+              permisos: Array.isArray(meData.user.permisos)
+                ? meData.user.permisos
+                : Array.isArray(data.user?.permisos)
+                ? data.user.permisos
+                : undefined,
             };
           }
         }
@@ -211,13 +220,106 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-4 relative overflow-hidden">
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-4 sm:p-6 lg:p-8 relative overflow-hidden">
       {/* Luces ambientales */}
       <div className="absolute top-1/4 -left-32 w-96 h-96 bg-emerald-500/15 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-1/4 -right-32 w-96 h-96 bg-teal-500/15 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-1/3 right-1/4 w-80 h-80 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
 
-      <div className="w-full max-w-md relative z-10 animate-fadeIn">
-        <div className="rounded-3xl border border-slate-800 bg-slate-900/90 backdrop-blur-xl p-8 sm:p-10 shadow-2xl space-y-6">
+      <div className="w-full max-w-7xl mx-auto relative z-10 animate-fadeIn">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
+          
+          {/* Columna Izquierda: Presentación Calculadora de Energía Solar + Imagen */}
+          <div className="lg:col-span-7 flex flex-col gap-5 text-left">
+            <div className="inline-flex items-center gap-2 text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-emerald-400">
+              <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+              Ingeniería Fotovoltaica · Fórmulas Oficiales Cotizador2 & Radiación Departamental
+            </div>
+
+            <h1
+              className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight font-display text-white leading-[1.12]"
+              style={{ textWrap: 'balance' }}
+            >
+              Calculadora de Energía Solar{' '}
+              <span className="block mt-1 sm:mt-1.5 bg-gradient-to-r from-emerald-400 via-teal-300 to-amber-400 bg-clip-text text-transparent">
+                Un Futuro Renovable
+              </span>
+            </h1>
+
+            <p className="text-sm sm:text-base text-slate-300 leading-relaxed max-w-2xl">
+              Dimensiona tu sistema fotovoltaico en <strong className="text-white">kWp</strong>, estima el número de paneles, tu ahorro mensual y el retorno de inversión con las fórmulas exactas del modelo de ingeniería y tarifas residencial/comercial.
+            </p>
+
+            {/* Métricas de Valor */}
+            <div className="grid grid-cols-3 gap-3 sm:gap-4 py-3 border-y border-slate-800/80">
+              <div className="flex flex-col">
+                <span className="text-lg sm:text-2xl font-black text-emerald-400 font-display tabular-nums">
+                  Hasta 95%
+                </span>
+                <span className="text-[11px] sm:text-xs text-slate-400">Ahorro en Factura</span>
+              </div>
+              <div className="flex flex-col">
+                <span className="text-lg sm:text-2xl font-black text-amber-400 font-display tabular-nums">
+                  2.8 - 4.5
+                </span>
+                <span className="text-[11px] sm:text-xs text-slate-400">Años Retorno (ROI)</span>
+              </div>
+              <div className="flex flex-col">
+                <span className="text-lg sm:text-2xl font-black text-blue-400 font-display tabular-nums">
+                  25 Años
+                </span>
+                <span className="text-[11px] sm:text-xs text-slate-400">Garantía de Potencia</span>
+              </div>
+            </div>
+
+            {/* Imagen Hero Solar integrada al diseño oscuro de la BD */}
+            <div className="relative rounded-2xl overflow-hidden border border-slate-800 shadow-2xl shadow-emerald-950/30 group">
+              <img
+                src="/src/assets/images/solar_rooftop_hero_1791465806784.jpg"
+                alt="Instalación de paneles solares fotovoltaicos sobre techo residencial moderno al atardecer"
+                referrerPolicy="no-referrer"
+                className="w-full h-56 sm:h-64 lg:h-72 object-cover object-center group-hover:scale-105 transition-transform duration-700 ease-out"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/30 to-transparent pointer-events-none" />
+
+              <div className="absolute bottom-3 left-3 right-3 sm:bottom-4 sm:left-4 sm:right-4 p-3.5 rounded-xl backdrop-blur-md bg-slate-900/85 border border-slate-700/60 text-white flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shrink-0">
+                    <Zap className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <p className="text-[11px] text-slate-400">Generación Limpia Estimada</p>
+                    <p className="text-xs sm:text-sm font-bold text-white">
+                      Autoconsumo & Balance Neto
+                    </p>
+                  </div>
+                </div>
+                <div className="text-right shrink-0">
+                  <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider block">
+                    ACTIVO
+                  </span>
+                  <span className="text-[11px] text-slate-400">25 Años Vida Útil</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Certificaciones */}
+            <div className="flex flex-wrap items-center gap-4 text-[11px] sm:text-xs text-slate-400">
+              <span className="flex items-center gap-1.5">
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" /> Paneles Tier 1 Bloomberg
+              </span>
+              <span className="flex items-center gap-1.5">
+                <Sun className="w-3.5 h-3.5 text-blue-400" /> Datos Satelitales NASA POWER (GHI / HSP)
+              </span>
+              <span className="flex items-center gap-1.5">
+                <TrendingDown className="w-3.5 h-3.5 text-amber-400" /> Inversores Eficiencia 98.6%
+              </span>
+            </div>
+          </div>
+
+          {/* Columna Derecha: Tarjeta de Login / Registro PostgreSQL */}
+          <div className="lg:col-span-5 w-full max-w-md mx-auto lg:max-w-none">
+            <div className="rounded-3xl border border-slate-800 bg-slate-900/90 backdrop-blur-xl p-7 sm:p-8 shadow-2xl space-y-6">
           {/* Logo y Encabezado */}
           <div className="text-center space-y-3">
             <div className="flex justify-center">
@@ -480,11 +582,13 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
               </div>
             </form>
           )}
-        </div>
+            </div>
 
-        <p className="text-center text-[11px] text-slate-600 mt-6">
-          © {new Date().getFullYear()} TICLINE EVOLUCIÓN · Autenticación PostgreSQL + JWT
-        </p>
+            <p className="text-center text-[11px] text-slate-600 mt-5">
+              © {new Date().getFullYear()} TICLINE EVOLUCIÓN · Autenticación PostgreSQL + JWT
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );

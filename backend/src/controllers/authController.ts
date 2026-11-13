@@ -4,6 +4,7 @@ import { signJwt, inspectDatabaseJwtToken } from '../utils/jwt.js';
 import { hashPassword, verifyPassword } from '../utils/passwordHash.js';
 import { validateEmail } from '../utils/emailValidator.js';
 import { AuthenticatedRequest } from '../middlewares/authMiddleware.js';
+import { PERMISOS_DEFAULT_POR_ROL } from '../utils/permisos.js';
 
 export async function login(req: Request, res: Response) {
   const { email, password } = req.body;
@@ -32,7 +33,7 @@ export async function login(req: Request, res: Response) {
   try {
     // 1. Consultar el usuario Y su token_jwt directamente en public.usuarios de PostgreSQL
     const result = await pool.query(
-      `SELECT id, email, password_hash, nombre, rol, token_jwt
+      `SELECT id, email, password_hash, nombre, rol, permisos, token_jwt
        FROM public.usuarios
        WHERE LOWER(TRIM(email)) = LOWER(TRIM($1))
        LIMIT 1`,
@@ -82,12 +83,21 @@ export async function login(req: Request, res: Response) {
 
     const inspected = inspectDatabaseJwtToken(storedToken, secret);
 
-    // Extraer las credenciales del token almacenado en PostgreSQL (con respaldo a las columnas de la fila)
+    const liveRol = String(dbUser.rol || 'Ingeniero de Proyectos');
+    const livePermisos =
+      liveRol.toLowerCase().includes('admin') && (!Array.isArray(dbUser.permisos) || dbUser.permisos.length === 0)
+        ? PERMISOS_DEFAULT_POR_ROL['Administrador']
+        : Array.isArray(dbUser.permisos)
+        ? dbUser.permisos.map(String)
+        : PERMISOS_DEFAULT_POR_ROL[liveRol] || PERMISOS_DEFAULT_POR_ROL['Ingeniero de Proyectos'];
+
+    // Usar siempre los datos vivos de PostgreSQL (rol, nombre, email, permisos)
     const tokenCredentials = {
-      id: String(inspected.payload?.userId || dbUser.id),
-      email: String(inspected.payload?.email || dbUser.email),
-      nombre: String(inspected.payload?.nombre || dbUser.nombre),
-      rol: String(inspected.payload?.rol || dbUser.rol),
+      id: String(dbUser.id),
+      email: String(dbUser.email),
+      nombre: String(dbUser.nombre),
+      rol: String(dbUser.rol),
+      permisos: livePermisos,
     };
 
     // 4. Si el token_jwt de la base de datos existe y sigue vigente, se usa ese mismo token_jwt de PostgreSQL.
@@ -134,6 +144,7 @@ export async function login(req: Request, res: Response) {
         email: tokenCredentials.email,
         nombre: tokenCredentials.nombre,
         rol: tokenCredentials.rol,
+        permisos: tokenCredentials.permisos,
       },
     });
   } catch (err: any) {
@@ -190,12 +201,14 @@ export async function register(req: Request, res: Response) {
     // 2. Encriptar la contraseña con Scrypt + Salt antes de guardarla en PostgreSQL
     const encryptedPassword = hashPassword(String(password));
 
-    // 3. Insertar el nuevo usuario en public.usuarios con la contraseña encriptada
+    // 3. Insertar el nuevo usuario en public.usuarios con la contraseña encriptada y permisos por defecto
+    const defaultPermisos =
+      PERMISOS_DEFAULT_POR_ROL[cleanRol] || PERMISOS_DEFAULT_POR_ROL['Ingeniero de Proyectos'];
     const insertRes = await pool.query(
-      `INSERT INTO public.usuarios (email, password_hash, nombre, rol, ultimo_login)
-       VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)
-       RETURNING id, email, nombre, rol, fecha_creacion`,
-      [cleanEmail, encryptedPassword, cleanNombre, cleanRol]
+      `INSERT INTO public.usuarios (email, password_hash, nombre, rol, permisos, ultimo_login)
+       VALUES ($1, $2, $3, $4, $5::jsonb, CURRENT_TIMESTAMP)
+       RETURNING id, email, nombre, rol, permisos, fecha_creacion`,
+      [cleanEmail, encryptedPassword, cleanNombre, cleanRol, JSON.stringify(defaultPermisos)]
     );
 
     const created = insertRes.rows[0];
@@ -235,6 +248,7 @@ export async function register(req: Request, res: Response) {
         email: created.email,
         nombre: created.nombre,
         rol: created.rol,
+        permisos: Array.isArray(created.permisos) ? created.permisos : defaultPermisos,
       },
     });
   } catch (err: any) {

@@ -18,6 +18,7 @@ import {
   KeyRound,
   ShieldAlert,
 } from 'lucide-react';
+import { hasPermission, PermissionUser } from '../../utils/permissions';
 
 export interface UsuarioPermiso {
   id: number;
@@ -36,10 +37,11 @@ export interface PermisoCatalogo {
 }
 
 interface Props {
-  currentUser?: { email: string; nombre: string; rol?: string } | null;
+  currentUser?: PermissionUser | null;
+  onUserPermissionsUpdated?: (userId: number, rol: string, permisos: string[]) => void;
 }
 
-export const RolesPermisosView: React.FC<Props> = ({ currentUser }) => {
+export const RolesPermisosView: React.FC<Props> = ({ currentUser, onUserPermissionsUpdated }) => {
   const [usuarios, setUsuarios] = useState<UsuarioPermiso[]>([]);
   const [catalogo, setCatalogo] = useState<PermisoCatalogo[]>([]);
   const [selectedUser, setSelectedUser] = useState<UsuarioPermiso | null>(null);
@@ -52,7 +54,9 @@ export const RolesPermisosView: React.FC<Props> = ({ currentUser }) => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  const esAdmin = currentUser?.rol?.toLowerCase().includes('admin') ?? false;
+  const esAdmin =
+    (currentUser?.rol?.toLowerCase().includes('admin') ?? false) ||
+    hasPermission(currentUser, 'roles:administrar');
 
   const getAuthToken = () =>
     sessionStorage.getItem('solar_auth_token') || localStorage.getItem('solar_auth_token');
@@ -136,20 +140,17 @@ export const RolesPermisosView: React.FC<Props> = ({ currentUser }) => {
       setSelectedPermisos(catalogo.map((p) => p.id));
     } else if (rol === 'Ingeniero de Proyectos') {
       setSelectedPermisos([
-        'CALCULAR_PROYECTO',
-        'DESCARGAR_COTIZACION_PDF',
-        'VER_HISTORIAL_COTIZACIONES',
-        'MODIFICAR_FORMULAS',
-        'EXPORTAR_REPORTES',
-        'AJUSTAR_PARAMETROS_FINANCIEROS',
+        'cotizaciones:crear',
+        'cotizaciones:ver',
+        'cotizaciones:descargar_pdf',
+        'usuarios:ver',
       ]);
     } else {
       // Asesor Comercial Solar
       setSelectedPermisos([
-        'CALCULAR_PROYECTO',
-        'DESCARGAR_COTIZACION_PDF',
-        'VER_HISTORIAL_COTIZACIONES',
-        'APLICAR_DESCUENTOS',
+        'cotizaciones:crear',
+        'cotizaciones:ver',
+        'cotizaciones:descargar_pdf',
       ]);
     }
   };
@@ -183,13 +184,14 @@ export const RolesPermisosView: React.FC<Props> = ({ currentUser }) => {
 
       setSuccess(`Permisos y rol actualizados exitosamente para ${selectedUser.nombre}.`);
 
-      // Actualizar estado local
+      // Actualizar estado local y notificar si se modificó el usuario actual
       setUsuarios((prev) =>
         prev.map((u) =>
           u.id === selectedUser.id ? { ...u, rol: currentRol, permisos: selectedPermisos } : u
         )
       );
       setSelectedUser({ ...selectedUser, rol: currentRol, permisos: selectedPermisos });
+      onUserPermissionsUpdated?.(selectedUser.id, currentRol, selectedPermisos);
     } catch (err: any) {
       setError(err.message || 'Error al persistir cambios en PostgreSQL.');
     } finally {

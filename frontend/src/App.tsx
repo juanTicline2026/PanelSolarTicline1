@@ -1,14 +1,16 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { ArrowLeft } from 'lucide-react';
 import { Header } from './components/Header';
-import { HeroSection } from './components/HeroSection';
 import { Cotizador2Calculator } from './components/Cotizador2Calculator';
 import { Login, AuthUser } from './components/Login';
-import { AdminWorkspace, AdminViewType } from './components/admin/AdminWorkspace';
+import { GestionCotizacionesView } from './components/admin/GestionCotizacionesView';
+import { GestionUsuariosView } from './components/admin/GestionUsuariosView';
+import { RolesPermisosView } from './components/admin/RolesPermisosView';
+
+type AdminViewType = 'cotizaciones' | 'usuarios' | 'roles';
 
 export default function App() {
   const [darkMode, setDarkMode] = useState<boolean>(() => true);
-  const [selectedCurrency, setSelectedCurrency] = useState<string>('COP');
-  const [showCalculator, setShowCalculator] = useState<boolean>(false);
 
   // Navegación principal: 'calculator' o 'admin'
   const [currentSection, setCurrentSection] = useState<'calculator' | 'admin'>('calculator');
@@ -41,6 +43,57 @@ export default function App() {
     localStorage.removeItem('solar_auth_user');
   }, []);
 
+  // Sincronizar rol y permisos vivos desde PostgreSQL (/api/auth/me)
+  const syncCurrentUserFromDb = useCallback(async () => {
+    if (!isAuthenticated) return;
+    const token = sessionStorage.getItem('solar_auth_token');
+    if (!token) return;
+    try {
+      const res = await fetch('/api/auth/me', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data?.user) {
+        const updatedUser: AuthUser = {
+          id: String(data.user.userId || currentUser?.id || ''),
+          email: data.user.email || currentUser?.email || '',
+          nombre: data.user.nombre || currentUser?.nombre || '',
+          rol: data.user.rol || currentUser?.rol || '',
+          permisos: Array.isArray(data.user.permisos) ? data.user.permisos : currentUser?.permisos,
+        };
+        sessionStorage.setItem('solar_auth_user', JSON.stringify(updatedUser));
+        setCurrentUser((prev) => {
+          const prevStr = JSON.stringify(prev);
+          const nextStr = JSON.stringify(updatedUser);
+          return prevStr === nextStr ? prev : updatedUser;
+        });
+      }
+    } catch {
+      // Ignorar errores transitorios de red durante el refresco en segundo plano
+    }
+  }, [isAuthenticated, currentUser?.id, currentUser?.email, currentUser?.nombre, currentUser?.rol]);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    syncCurrentUserFromDb();
+    const onFocus = () => syncCurrentUserFromDb();
+    window.addEventListener('focus', onFocus);
+    const interval = window.setInterval(syncCurrentUserFromDb, 15000);
+    return () => {
+      window.removeEventListener('focus', onFocus);
+      window.clearInterval(interval);
+    };
+  }, [isAuthenticated, currentSection, adminSubView, syncCurrentUserFromDb]);
+
+  const handleUserPermissionsUpdated = (targetUserId: number, newRol: string, newPermisos: string[]) => {
+    if (currentUser && String(currentUser.id) === String(targetUserId)) {
+      const updated: AuthUser = { ...currentUser, rol: newRol, permisos: newPermisos };
+      sessionStorage.setItem('solar_auth_user', JSON.stringify(updated));
+      setCurrentUser(updated);
+    }
+  };
+
   // Synchronize HTML dark class
   useEffect(() => {
     if (darkMode) {
@@ -52,7 +105,6 @@ export default function App() {
 
   const handleStartCalculator = () => {
     setCurrentSection('calculator');
-    setShowCalculator(true);
     setTimeout(() => {
       const el = document.getElementById('calculadora');
       if (el) {
@@ -61,36 +113,12 @@ export default function App() {
     }, 60);
   };
 
+
+
   const handleOpenPanelAdmin = (view: AdminViewType = 'cotizaciones') => {
     setAdminSubView(view);
     setCurrentSection('admin');
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  const handleOpenQuote = () => {
-    setCurrentSection('calculator');
-    if (!showCalculator) {
-      setShowCalculator(true);
-      setTimeout(() => {
-        const btn = document.getElementById('btn-generar-pdf-cotizacion');
-        if (btn) {
-          btn.scrollIntoView({ behavior: 'smooth' });
-          btn.classList.add('ring-4', 'ring-emerald-400');
-          setTimeout(() => btn.classList.remove('ring-4', 'ring-emerald-400'), 2000);
-        } else {
-          handleStartCalculator();
-        }
-      }, 100);
-    } else {
-      const btn = document.getElementById('btn-generar-pdf-cotizacion');
-      if (btn) {
-        btn.scrollIntoView({ behavior: 'smooth' });
-        btn.classList.add('ring-4', 'ring-emerald-400');
-        setTimeout(() => btn.classList.remove('ring-4', 'ring-emerald-400'), 2000);
-      } else {
-        handleStartCalculator();
-      }
-    }
   };
 
   // Si el usuario no ha iniciado sesión, mostrar siempre la pantalla de Login / Registro
@@ -104,56 +132,63 @@ export default function App() {
       <Header
         darkMode={darkMode}
         onToggleDarkMode={() => setDarkMode(!darkMode)}
-        selectedCurrency={selectedCurrency}
-        onSelectCurrency={setSelectedCurrency}
-        onOpenQuoteModal={handleOpenQuote}
         onOpenCalculator={handleStartCalculator}
         onOpenPanelAdmin={() => handleOpenPanelAdmin('cotizaciones')}
         onOpenRolesPermisos={() => handleOpenPanelAdmin('roles')}
         onOpenGestionCotizaciones={() => handleOpenPanelAdmin('cotizaciones')}
+        onOpenGestionUsuarios={() => handleOpenPanelAdmin('usuarios')}
         onLogout={handleLogout}
         currentUser={currentUser}
         activeSection={currentSection}
       />
 
-      {/* Renderizado Condicional: Modo Administrador vs Modo Cotizador */}
+      {/* Renderizado Condicional: Vistas Administrativas vs Modo Cotizador */}
       {currentSection === 'admin' ? (
-        <AdminWorkspace
-          key={adminSubView}
-          initialView={adminSubView}
-          currentUser={currentUser}
-          onBackToCalculator={handleStartCalculator}
-        />
-      ) : (
-        <>
-          {/* Hero Section Inicial */}
-          <HeroSection onStartCalculator={handleStartCalculator} />
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-10 space-y-6 animate-fadeIn">
+          <div className="flex items-center justify-between">
+            <button
+              type="button"
+              onClick={handleStartCalculator}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:border-emerald-500/50 hover:text-emerald-500 transition-colors cursor-pointer"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>Volver al Cotizador</span>
+            </button>
+          </div>
 
-          {/* Main Content Area: Se muestra en secuencia tras pulsar 'Calcular Mi Proyecto Ahora' */}
-          {showCalculator && (
-            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 lg:py-14 space-y-14 animate-fadeIn">
-              {/* Calculator Container: Cotizador Solar Oficial */}
-              <section id="calculadora" className="scroll-mt-20 space-y-6">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200 dark:border-slate-800">
-                  <div>
-                    <span className={`text-xs font-bold uppercase tracking-wider ${darkMode ? 'text-emerald-400' : 'text-emerald-600'}`}>
-                      Herramienta de Cotización de Ingeniería
-                    </span>
-                    <h2 className={`text-2xl sm:text-3xl font-extrabold font-display ${darkMode ? 'text-white' : 'text-slate-900'} tracking-tight drop-shadow-sm`}>
-                      Cotizador Solar Fotovoltaico
-                    </h2>
-                  </div>
-                  <div className={`flex items-center gap-2 text-xs font-medium ${darkMode ? 'text-slate-300' : 'text-slate-600'}`}>
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-                    <span>Fórmulas Oficiales de Ingeniería Solar para Ciudades de Colombia</span>
-                  </div>
-                </div>
-
-                <Cotizador2Calculator />
-              </section>
-            </main>
+          {adminSubView === 'cotizaciones' ? (
+            <GestionCotizacionesView currentUser={currentUser} />
+          ) : adminSubView === 'usuarios' ? (
+            <GestionUsuariosView currentUser={currentUser} />
+          ) : (
+            <RolesPermisosView
+              currentUser={currentUser}
+              onUserPermissionsUpdated={handleUserPermissionsUpdated}
+            />
           )}
-        </>
+        </main>
+      ) : (
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-10 space-y-14 animate-fadeIn">
+          {/* Calculator Container: Cotizador Solar Oficial */}
+          <section id="calculadora" className="scroll-mt-20 space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200 dark:border-slate-800">
+              <div>
+                <span className={`text-xs font-bold uppercase tracking-wider ${darkMode ? 'text-emerald-400' : 'text-emerald-600'}`}>
+                  Herramienta de Cotización de Ingeniería
+                </span>
+                <h2 className={`text-2xl sm:text-3xl font-extrabold font-display ${darkMode ? 'text-white' : 'text-slate-900'} tracking-tight drop-shadow-sm`}>
+                  Cotizador Solar Fotovoltaico
+                </h2>
+              </div>
+              <div className={`flex items-center gap-2 text-xs font-medium ${darkMode ? 'text-slate-300' : 'text-slate-600'}`}>
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                <span>Fórmulas Oficiales de Ingeniería Solar para Ciudades de Colombia</span>
+              </div>
+            </div>
+
+            <Cotizador2Calculator currentUser={currentUser} />
+          </section>
+        </main>
       )}
 
       {/* Footer con Logo Oficial Ticline */}
