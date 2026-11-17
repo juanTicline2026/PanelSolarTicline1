@@ -89,6 +89,9 @@ const SCHEMA_SQL = `
   ALTER TABLE public.usuarios ADD COLUMN IF NOT EXISTS token_jwt TEXT;
   ALTER TABLE public.usuarios ADD COLUMN IF NOT EXISTS ultimo_login TIMESTAMP;
   ALTER TABLE public.usuarios ADD COLUMN IF NOT EXISTS permisos JSONB DEFAULT '[]'::jsonb;
+  -- Fecha y hora de la última modificación del usuario (datos, rol o permisos)
+  ALTER TABLE public.usuarios ADD COLUMN IF NOT EXISTS fecha_actualizacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+  UPDATE public.usuarios SET fecha_actualizacion = fecha_creacion WHERE fecha_actualizacion IS NULL;
 
   -- 2. Tabla de Historial de Sesiones y Tokens JWT emitidos
   CREATE TABLE IF NOT EXISTS public.sesiones_jwt (
@@ -129,6 +132,9 @@ const SCHEMA_SQL = `
   ALTER TABLE public.cotizaciones ADD COLUMN IF NOT EXISTS tir_pct NUMERIC(8, 4);
   ALTER TABLE public.cotizaciones ADD COLUMN IF NOT EXISTS ahorro_co2_ton NUMERIC(10, 2);
   ALTER TABLE public.cotizaciones ADD COLUMN IF NOT EXISTS datos_cotizacion JSONB;
+  -- Fecha y hora en que se generó o modificó por última vez la cotización
+  ALTER TABLE public.cotizaciones ADD COLUMN IF NOT EXISTS fecha_actualizacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+  UPDATE public.cotizaciones SET fecha_actualizacion = fecha_creacion WHERE fecha_actualizacion IS NULL;
 
   -- 4. Tabla de Fórmulas del Cotizador Solar
   CREATE TABLE IF NOT EXISTS public.formulas_sistema (

@@ -6,6 +6,7 @@ import { Login, AuthUser } from './components/Login';
 import { GestionCotizacionesView } from './components/admin/GestionCotizacionesView';
 import { GestionUsuariosView } from './components/admin/GestionUsuariosView';
 import { RolesPermisosView } from './components/admin/RolesPermisosView';
+import { hasModuleAccess, hasPermission, isAdminUser } from './utils/permissions';
 
 type AdminViewType = 'cotizaciones' | 'usuarios' | 'roles';
 
@@ -103,7 +104,50 @@ export default function App() {
     }
   }, [darkMode]);
 
+  const canCotizador =
+    hasModuleAccess(currentUser, 'modulo:cotizador', 'cotizaciones:crear') &&
+    hasPermission(currentUser, 'cotizaciones:crear');
+  const canCotizaciones = hasModuleAccess(currentUser, 'modulo:gestion_cotizaciones', 'cotizaciones:ver');
+  const canUsuarios = hasModuleAccess(currentUser, 'modulo:gestion_usuarios', 'usuarios:ver');
+  const canRoles =
+    hasModuleAccess(currentUser, 'modulo:roles_permisos', 'roles:administrar') ||
+    hasPermission(currentUser, 'roles:administrar') ||
+    isAdminUser(currentUser);
+
+  // Redirigir automáticamente a la primera vista permitida si la vista actual no está autorizada
+  useEffect(() => {
+    if (!isAuthenticated || !currentUser) return;
+
+    const redirectToFirstAllowed = () => {
+      if (canCotizador) {
+        setCurrentSection('calculator');
+      } else if (canCotizaciones) {
+        setCurrentSection('admin');
+        setAdminSubView('cotizaciones');
+      } else if (canUsuarios) {
+        setCurrentSection('admin');
+        setAdminSubView('usuarios');
+      } else if (canRoles) {
+        setCurrentSection('admin');
+        setAdminSubView('roles');
+      }
+    };
+
+    if (currentSection === 'calculator' && !canCotizador) {
+      redirectToFirstAllowed();
+    } else if (currentSection === 'admin') {
+      if (adminSubView === 'cotizaciones' && !canCotizaciones) {
+        redirectToFirstAllowed();
+      } else if (adminSubView === 'usuarios' && !canUsuarios) {
+        redirectToFirstAllowed();
+      } else if (adminSubView === 'roles' && !canRoles) {
+        redirectToFirstAllowed();
+      }
+    }
+  }, [isAuthenticated, currentUser, currentSection, adminSubView, canCotizador, canCotizaciones, canUsuarios, canRoles]);
+
   const handleStartCalculator = () => {
+    if (!canCotizador) return;
     setCurrentSection('calculator');
     setTimeout(() => {
       const el = document.getElementById('calculadora');
@@ -145,16 +189,18 @@ export default function App() {
       {/* Renderizado Condicional: Vistas Administrativas vs Modo Cotizador */}
       {currentSection === 'admin' ? (
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-10 space-y-6 animate-fadeIn">
-          <div className="flex items-center justify-between">
-            <button
-              type="button"
-              onClick={handleStartCalculator}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:border-emerald-500/50 hover:text-emerald-500 transition-colors cursor-pointer"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              <span>Volver al Cotizador</span>
-            </button>
-          </div>
+          {canCotizador && (
+            <div className="flex items-center justify-between">
+              <button
+                type="button"
+                onClick={handleStartCalculator}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:border-emerald-500/50 hover:text-emerald-500 transition-colors cursor-pointer"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span>Volver al Cotizador</span>
+              </button>
+            </div>
+          )}
 
           {adminSubView === 'cotizaciones' ? (
             <GestionCotizacionesView currentUser={currentUser} />
@@ -167,7 +213,7 @@ export default function App() {
             />
           )}
         </main>
-      ) : (
+      ) : canCotizador ? (
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-10 space-y-14 animate-fadeIn">
           {/* Calculator Container: Cotizador Solar Oficial */}
           <section id="calculadora" className="scroll-mt-20 space-y-6">
@@ -189,6 +235,8 @@ export default function App() {
             <Cotizador2Calculator currentUser={currentUser} />
           </section>
         </main>
+      ) : (
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 min-h-[55vh]" />
       )}
 
       {/* Footer con Logo Oficial Ticline */}

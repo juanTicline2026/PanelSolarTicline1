@@ -24,6 +24,7 @@ import {
   ShieldAlert,
 } from 'lucide-react';
 import { hasPermission, PermissionUser } from '../../utils/permissions';
+import { formatFechaHora } from '../../utils/formatDate';
 
 export interface UsuarioItem {
   id: number;
@@ -33,6 +34,7 @@ export interface UsuarioItem {
   permisos: string[];
   ultimoLogin?: string;
   fechaCreacion?: string;
+  fechaActualizacion?: string;
 }
 
 interface Props {
@@ -473,6 +475,7 @@ export const GestionUsuariosView: React.FC<Props> = ({ currentUser }) => {
                   <th className="py-3.5 px-4">Rol</th>
                   <th className="py-3.5 px-4">Permisos</th>
                   <th className="py-3.5 px-4">Último Acceso</th>
+                  <th className="py-3.5 px-4">Fecha Actualización</th>
                   <th className="py-3.5 px-4 text-right">Acciones (CRUD)</th>
                 </tr>
               </thead>
@@ -542,6 +545,20 @@ export const GestionUsuariosView: React.FC<Props> = ({ currentUser }) => {
                               day: 'numeric',
                             })
                           : 'Sin registro'}
+                      </td>
+
+                      <td className="py-3.5 px-4 text-[11px] whitespace-nowrap">
+                        {(() => {
+                          const f = formatFechaHora(u.fechaActualizacion || u.fechaCreacion);
+                          return f ? (
+                            <>
+                              <div className="font-semibold text-slate-700 dark:text-slate-300">{f.fecha}</div>
+                              <div className="text-[10px] text-slate-400">{f.hora}</div>
+                            </>
+                          ) : (
+                            <span className="text-slate-400">Sin registro</span>
+                          );
+                        })()}
                       </td>
 
                       {/* Acciones CRUD */}

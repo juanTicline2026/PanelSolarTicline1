@@ -25,6 +25,7 @@ import {
   ShieldAlert,
 } from 'lucide-react';
 import { hasPermission, PermissionUser } from '../../utils/permissions';
+import { formatFechaHora } from '../../utils/formatDate';
 
 export interface CotizacionItem {
   id: number;
@@ -50,6 +51,7 @@ export interface CotizacionItem {
   ahorroCo2Ton?: number;
   datosCotizacion?: any;
   fechaCreacion: string;
+  fechaActualizacion?: string;
 }
 
 interface Props {
@@ -495,6 +497,7 @@ export const GestionCotizacionesView: React.FC<Props> = ({ currentUser }) => {
                   <th className="py-3.5 px-4">Ahorro Mensual</th>
                   <th className="py-3.5 px-4">Creado Por</th>
                   <th className="py-3.5 px-4">Fecha</th>
+                  <th className="py-3.5 px-4">Fecha Actualización</th>
                   <th className="py-3.5 px-4 text-right">Acciones (CRUD)</th>
                 </tr>
               </thead>
@@ -568,6 +571,20 @@ export const GestionCotizacionesView: React.FC<Props> = ({ currentUser }) => {
                             day: 'numeric',
                           })
                         : 'Reciente'}
+                    </td>
+
+                    <td className="py-3.5 px-4 text-[11px] whitespace-nowrap">
+                      {(() => {
+                        const f = formatFechaHora(c.fechaActualizacion || c.fechaCreacion);
+                        return f ? (
+                          <>
+                            <div className="font-semibold text-slate-700 dark:text-slate-300">{f.fecha}</div>
+                            <div className="text-[10px] text-slate-400">{f.hora}</div>
+                          </>
+                        ) : (
+                          <span className="text-slate-400">Sin registro</span>
+                        );
+                      })()}
                     </td>
 
                     {/* Acciones CRUD */}

@@ -24,7 +24,8 @@ export async function getUsuarios(req: AuthenticatedRequest, res: Response) {
         rol, 
         permisos,
         ultimo_login AS "ultimoLogin",
-        fecha_creacion AS "fechaCreacion"
+        fecha_creacion AS "fechaCreacion",
+        COALESCE(fecha_actualizacion, fecha_creacion) AS "fechaActualizacion"
       FROM public.usuarios
       ORDER BY id ASC;
     `);
@@ -79,13 +80,13 @@ export async function updateUsuarioPermisos(req: AuthenticatedRequest, res: Resp
     // Si viene nuevo rol, actualizar ambos; si no, solo permisos
     const query = rol
       ? `UPDATE public.usuarios 
-         SET rol = $1, permisos = $2::jsonb 
+         SET rol = $1, permisos = $2::jsonb, fecha_actualizacion = CURRENT_TIMESTAMP 
          WHERE id = $3 
-         RETURNING id, email, nombre, rol, permisos;`
+         RETURNING id, email, nombre, rol, permisos, fecha_actualizacion AS "fechaActualizacion";`
       : `UPDATE public.usuarios 
-         SET permisos = $1::jsonb 
+         SET permisos = $1::jsonb, fecha_actualizacion = CURRENT_TIMESTAMP 
          WHERE id = $2 
-         RETURNING id, email, nombre, rol, permisos;`;
+         RETURNING id, email, nombre, rol, permisos, fecha_actualizacion AS "fechaActualizacion";`;
 
     const values = rol ? [String(rol), JSON.stringify(permisos), id] : [JSON.stringify(permisos), id];
 
@@ -157,9 +158,9 @@ export async function createUsuario(req: AuthenticatedRequest, res: Response) {
       PERMISOS_DEFAULT_POR_ROL[cleanRol] || PERMISOS_DEFAULT_POR_ROL['Ingeniero de Proyectos'];
 
     const insertRes = await pool.query(
-      `INSERT INTO public.usuarios (email, password_hash, nombre, rol, permisos)
-       VALUES ($1, $2, $3, $4, $5::jsonb)
-       RETURNING id, email, nombre, rol, permisos, ultimo_login AS "ultimoLogin", fecha_creacion AS "fechaCreacion"`,
+      `INSERT INTO public.usuarios (email, password_hash, nombre, rol, permisos, fecha_actualizacion)
+       VALUES ($1, $2, $3, $4, $5::jsonb, CURRENT_TIMESTAMP)
+       RETURNING id, email, nombre, rol, permisos, ultimo_login AS "ultimoLogin", fecha_creacion AS "fechaCreacion", fecha_actualizacion AS "fechaActualizacion"`,
       [cleanEmail, passwordHash, cleanNombre, cleanRol, JSON.stringify(defaultPerms)]
     );
 
@@ -245,9 +246,10 @@ export async function updateUsuario(req: AuthenticatedRequest, res: Response) {
         email = COALESCE($1, email),
         nombre = COALESCE($2, nombre),
         rol = COALESCE($3, rol),
-        password_hash = COALESCE($4, password_hash)
+        password_hash = COALESCE($4, password_hash),
+        fecha_actualizacion = CURRENT_TIMESTAMP
        WHERE id = $5
-       RETURNING id, email, nombre, rol, permisos, ultimo_login AS "ultimoLogin", fecha_creacion AS "fechaCreacion"`,
+       RETURNING id, email, nombre, rol, permisos, ultimo_login AS "ultimoLogin", fecha_creacion AS "fechaCreacion", fecha_actualizacion AS "fechaActualizacion"`,
       [cleanEmail, cleanNombre, cleanRol, passwordHash, id]
     );
 

@@ -70,7 +70,8 @@ const SELECT_COTIZACION = `
     c.tir_pct AS "tirPct",
     c.ahorro_co2_ton AS "ahorroCo2Ton",
     c.datos_cotizacion AS "datosCotizacion",
-    c.fecha_creacion AS "fechaCreacion"
+    c.fecha_creacion AS "fechaCreacion",
+    COALESCE(c.fecha_actualizacion, c.fecha_creacion) AS "fechaActualizacion"
   FROM public.cotizaciones c
 `;
 
@@ -165,15 +166,15 @@ export async function createCotizacion(req: AuthenticatedRequest, res: Response)
         cliente, proyecto, ciudad, departamento,
         consumo_kwh, potencia_panel_w, paneles, kwp, area_requerida_m2, produccion_mensual_kwh,
         radiacion_hsp, trm, inversion_cop, ahorro_mensual_cop, retorno_anios, tir_pct, ahorro_co2_ton,
-        datos_cotizacion
+        datos_cotizacion, fecha_actualizacion
       ) VALUES (
         $1, $2, $3,
         $4, $5, $6, $7,
         $8, $9, $10, $11, $12, $13,
         $14, $15, $16, $17, $18, $19, $20,
-        $21
+        $21, CURRENT_TIMESTAMP
       )
-      RETURNING id, usuario_id AS "usuarioId", usuario_nombre AS "usuarioNombre", fecha_creacion AS "fechaCreacion"`,
+      RETURNING id, usuario_id AS "usuarioId", usuario_nombre AS "usuarioNombre", fecha_creacion AS "fechaCreacion", fecha_actualizacion AS "fechaActualizacion"`,
       [
         usuarioId,
         usuarioNombre,
@@ -257,7 +258,8 @@ export async function updateCotizacion(req: AuthenticatedRequest, res: Response)
         inversion_cop = COALESCE($9, inversion_cop),
         ahorro_mensual_cop = COALESCE($10, ahorro_mensual_cop),
         retorno_anios = COALESCE($11, retorno_anios),
-        tir_pct = COALESCE($12, tir_pct)
+        tir_pct = COALESCE($12, tir_pct),
+        fecha_actualizacion = CURRENT_TIMESTAMP
       WHERE id = $13
       RETURNING
         id,
@@ -276,7 +278,8 @@ export async function updateCotizacion(req: AuthenticatedRequest, res: Response)
         ahorro_mensual_cop AS "ahorroMensualCop",
         retorno_anios AS "retornoAnios",
         tir_pct AS "tirPct",
-        fecha_creacion AS "fechaCreacion"`,
+        fecha_creacion AS "fechaCreacion",
+        fecha_actualizacion AS "fechaActualizacion"`,
       [
         b.cliente ? String(b.cliente) : null,
         b.proyecto ? String(b.proyecto) : null,
