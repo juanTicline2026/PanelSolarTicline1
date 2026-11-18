@@ -47,7 +47,10 @@ async function getImageElement(url: string): Promise<HTMLImageElement | null> {
   });
 }
 
-export async function generateProposalPdf(data: ProposalPdfData): Promise<void> {
+export async function generateProposalPdf(
+  data: ProposalPdfData,
+  options?: { previewOnly?: boolean }
+): Promise<string> {
   // Exact format: US Letter Landscape (279.4 x 215.9 mm)
   const doc = new jsPDF({
     orientation: 'landscape',
@@ -733,8 +736,14 @@ export async function generateProposalPdf(data: ProposalPdfData): Promise<void> 
     doc.addImage(img54, 'JPEG', pageWidth - 55, bannerY + 12, 44, 18);
   }
 
+  if (options?.previewOnly) {
+    const blob = doc.output('blob');
+    return URL.createObjectURL(blob);
+  }
+
   // Clean filename with project/client name and selected city
   const safeTitle = (projectName || clientName || 'Cotizacion').replace(/[^a-zA-Z0-9_-]/g, '_');
   const safeCity = locationCity.replace(/[^a-zA-Z0-9_-]/g, '_');
   doc.save(`Cotizacion_${safeTitle}_${safeCity}_Ticline.pdf`);
+  return '';
 }

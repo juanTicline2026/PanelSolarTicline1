@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { hasPermission, PermissionUser } from '../../utils/permissions';
 import { formatFechaHora } from '../../utils/formatDate';
+import { generateProposalPdf, ProposalPdfData } from '../../utils/pdfGenerator';
 
 export interface CotizacionItem {
   id: number;
@@ -56,6 +57,7 @@ export interface CotizacionItem {
 
 interface Props {
   currentUser?: PermissionUser | null;
+  onEditCotizacionInCalculator?: (cot: CotizacionItem) => void;
 }
 
 const nf = (v: number | string | undefined | null, d = 0) => {
@@ -67,7 +69,10 @@ const nf = (v: number | string | undefined | null, d = 0) => {
 
 const cop = (v: number | string | undefined | null) => `$ ${nf(v)} COP`;
 
-export const GestionCotizacionesView: React.FC<Props> = ({ currentUser }) => {
+export const GestionCotizacionesView: React.FC<Props> = ({
+  currentUser,
+  onEditCotizacionInCalculator,
+}) => {
   const [cotizaciones, setCotizaciones] = useState<CotizacionItem[]>([]);
   const [filtro, setFiltro] = useState('');
   const [loading, setLoading] = useState(false);
@@ -76,6 +81,8 @@ export const GestionCotizacionesView: React.FC<Props> = ({ currentUser }) => {
 
   // Modales del CRUD
   const [modalVer, setModalVer] = useState<CotizacionItem | null>(null);
+  const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
+  const [loadingPdfPreview, setLoadingPdfPreview] = useState(false);
   const [modalEliminar, setModalEliminar] = useState<CotizacionItem | null>(null);
   const [modalEditar, setModalEditar] = useState<CotizacionItem | null>(null);
   const [modalCrear, setModalCrear] = useState(false);
@@ -148,6 +155,95 @@ export const GestionCotizacionesView: React.FC<Props> = ({ currentUser }) => {
     }
   }, [success]);
 
+  const buildPdfDataFromCotizacion = (cot: CotizacionItem): ProposalPdfData => {
+    const raw =
+      cot.datosCotizacion && typeof cot.datosCotizacion === 'object' ? cot.datosCotizacion : {};
+    const paneles = Number(cot.paneles) || Number(raw.panelCount) || 10;
+    const potenciaPanel = Number(cot.potenciaPanelW) || Number(raw.potenciaPanel) || 585;
+    const kwp = Number(cot.kwp) || Number(raw.kwp) || Number(((paneles * potenciaPanel) / 1000).toFixed(2));
+    const consumoKwh = Number(cot.consumoKwh) || Number(raw.consumoKwh) || Math.round(kwp * 125);
+    const produccionMensualKwh =
+      Number(cot.produccionMensualKwh) || Number(raw.produccionMensualKwh) || Math.round(kwp * 120);
+    const inversionCop = Number(cot.inversionCop) || Number(raw.costoSolucionCop) || 18000000;
+    const ahorroMensualCop = Number(cot.ahorroMensualCop) || Number(raw.ahorroMensualCop) || 350000;
+    const retornoAnios =
+      Number(cot.retornoAnios) ||
+      Number(raw.retornoAnios) ||
+      (ahorroMensualCop > 0 ? Number((inversionCop / (ahorroMensualCop * 12)).toFixed(1)) : 3.8);
+    const tirPct = Number(cot.tirPct) || Number(raw.tirPct) || 26.5;
+
+    return {
+      ...raw,
+      projectCode: raw.projectCode || `COT-${cot.id}`,
+      date: cot.fechaCreacion
+        ? new Intl.DateTimeFormat('es-CO', { month: 'long', day: '2-digit', year: 'numeric' }).format(
+            new Date(cot.fechaCreacion)
+          )
+        : raw.date,
+      clientName: cot.cliente || raw.clientName || 'Cliente Solar',
+      projectName: cot.proyecto || raw.projectName || 'Proyecto Solar',
+      city: cot.ciudad || raw.city || 'Medellín',
+      department: cot.departamento || raw.department || 'Antioquia',
+      trm: Number(cot.trm) || Number(raw.trm) || 4200,
+      consumoKwh,
+      potenciaPanel,
+      panelCount: paneles,
+      kwp,
+      areaRequeridaM2:
+        Number(cot.areaRequeridaM2) || Number(raw.areaRequeridaM2) || Math.round(paneles * 2.6),
+      produccionMensualKwh,
+      produccionAnualKwh: Number(raw.produccionAnualKwh) || produccionMensualKwh * 12,
+      ahorroPct: Number(raw.ahorroPct) || 100,
+      ahorroCo2Ton: Number(cot.ahorroCo2Ton) || Number(raw.ahorroCo2Ton) || Number((kwp * 0.58).toFixed(2)),
+      arboles: Number(raw.arboles) || Math.max(1, Math.round(kwp * 1.4)),
+      costoSolucionCop: inversionCop,
+      ahorroMensualCop,
+      ahorro30AniosCop: Number(raw.ahorro30AniosCop) || Math.round(ahorroMensualCop * 12 * 30),
+      retornoAnios,
+      retornoMeses: Number(raw.retornoMeses) || Math.round(retornoAnios * 12),
+      tirPct,
+      flujoAnual: Array.isArray(raw.flujoAnual) ? raw.flujoAnual : undefined,
+    };
+  };
+
+  // Generar el PDF en un Blob URL cuando se abre el modal del ojo (modalVer)
+  useEffect(() => {
+    let active = true;
+    let currentUrl: string | null = null;
+
+    if (!modalVer) {
+      setPdfPreviewUrl(null);
+      setLoadingPdfPreview(false);
+      return;
+    }
+
+    setLoadingPdfPreview(true);
+    setPdfPreviewUrl(null);
+
+    generateProposalPdf(buildPdfDataFromCotizacion(modalVer), { previewOnly: true })
+      .then((url) => {
+        if (!active) {
+          if (url) URL.revokeObjectURL(url);
+          return;
+        }
+        currentUrl = url;
+        setPdfPreviewUrl(url);
+      })
+      .catch(() => {
+        if (active) setPdfPreviewUrl(null);
+      })
+      .finally(() => {
+        if (active) setLoadingPdfPreview(false);
+      });
+
+    return () => {
+      active = false;
+      if (currentUrl) {
+        URL.revokeObjectURL(currentUrl);
+      }
+    };
+  }, [modalVer]);
+
   // C: CREATE
   const handleOpenCrear = () => {
     setForm({
@@ -202,8 +298,12 @@ export const GestionCotizacionesView: React.FC<Props> = ({ currentUser }) => {
     }
   };
 
-  // U: UPDATE
+  // U: UPDATE (Redirigir al Cotizador con todos los datos cargados)
   const handleOpenEditar = (cot: CotizacionItem) => {
+    if (onEditCotizacionInCalculator) {
+      onEditCotizacionInCalculator(cot);
+      return;
+    }
     setForm({
       cliente: cot.cliente || '',
       proyecto: cot.proyecto || '',
@@ -634,11 +734,11 @@ export const GestionCotizacionesView: React.FC<Props> = ({ currentUser }) => {
       </div>
 
       {/* ========================================================================= */}
-      {/* MODAL 1: VER DETALLE (R)                                                  */}
+      {/* MODAL 1: VER DETALLE Y PREVISUALIZACIÓN PDF (R)                           */}
       {/* ========================================================================= */}
       {modalVer && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fadeIn">
-          <div className="relative w-full max-w-2xl rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xl p-6 space-y-6">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md animate-fadeIn">
+          <div className="relative w-full max-w-5xl max-h-[94vh] overflow-y-auto rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xl p-5 sm:p-6 space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center">
@@ -646,101 +746,63 @@ export const GestionCotizacionesView: React.FC<Props> = ({ currentUser }) => {
                 </div>
                 <div>
                   <h3 className="text-lg font-bold text-slate-900 dark:text-white">
-                    Detalle de Cotización #{modalVer.id}
+                    Cotización Oficial en PDF #{modalVer.id} — {modalVer.cliente}
                   </h3>
                   <p className="text-xs text-slate-400">
-                    Creada por {modalVer.usuarioNombre} el{' '}
-                    {new Date(modalVer.fechaCreacion).toLocaleString('es-CO')}
+                    {modalVer.proyecto} • {modalVer.ciudad}, {modalVer.departamento} •{' '}
+                    {nf(modalVer.kwp, 2)} kWp ({modalVer.paneles} paneles) • {cop(modalVer.inversionCop)}
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => setModalVer(null)}
-                className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
+                className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-xs">
-              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
-                <div className="text-slate-400">Cliente</div>
-                <div className="font-bold text-sm text-slate-900 dark:text-slate-100 mt-1">
-                  {modalVer.cliente}
+            {/* Recuadro del PDF de la Cotización */}
+            <div className="w-full h-[55vh] sm:h-[70vh] rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-950 overflow-hidden flex items-center justify-center">
+              {loadingPdfPreview ? (
+                <div className="flex flex-col items-center gap-3 text-slate-300">
+                  <Loader2 className="w-8 h-8 animate-spin text-emerald-400" />
+                  <span className="text-xs font-semibold">Generando vista previa del PDF de la cotización...</span>
                 </div>
-              </div>
-
-              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
-                <div className="text-slate-400">Proyecto</div>
-                <div className="font-bold text-sm text-slate-900 dark:text-slate-100 mt-1">
-                  {modalVer.proyecto}
+              ) : pdfPreviewUrl ? (
+                <iframe
+                  src={pdfPreviewUrl}
+                  title={`PDF Cotización #${modalVer.id}`}
+                  className="w-full h-full border-0"
+                />
+              ) : (
+                <div className="text-xs text-slate-400">
+                  No se pudo cargar la vista previa del PDF.
                 </div>
-              </div>
-
-              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
-                <div className="text-slate-400">Ubicación</div>
-                <div className="font-bold text-sm text-slate-900 dark:text-slate-100 mt-1">
-                  {modalVer.ciudad}, {modalVer.departamento}
-                </div>
-              </div>
-
-              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
-                <div className="text-slate-400">Potencia Pico (kWp)</div>
-                <div className="font-bold text-sm text-amber-500 mt-1">
-                  {nf(modalVer.kwp, 2)} kWp ({modalVer.paneles} paneles)
-                </div>
-              </div>
-
-              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
-                <div className="text-slate-400">Inversión Estimada</div>
-                <div className="font-bold text-sm text-slate-900 dark:text-slate-100 mt-1">
-                  {cop(modalVer.inversionCop)}
-                </div>
-              </div>
-
-              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
-                <div className="text-slate-400">Ahorro Mensual Estimado</div>
-                <div className="font-bold text-sm text-emerald-500 mt-1">
-                  {cop(modalVer.ahorroMensualCop)}
-                </div>
-              </div>
-
-              {Number(modalVer.retornoAnios) > 0 ? (
-                <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
-                  <div className="text-slate-400">Retorno de Inversión</div>
-                  <div className="font-bold text-sm text-slate-900 dark:text-slate-100 mt-1">
-                    {nf(modalVer.retornoAnios, 1)} años
-                  </div>
-                </div>
-              ) : null}
-
-              {Number(modalVer.tirPct) > 0 ? (
-                <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
-                  <div className="text-slate-400">TIR Estimada</div>
-                  <div className="font-bold text-sm text-teal-500 mt-1">
-                    {nf(modalVer.tirPct, 1)}%
-                  </div>
-                </div>
-              ) : null}
-
-              {Number(modalVer.consumoKwh) > 0 ? (
-                <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
-                  <div className="text-slate-400">Consumo Mensual Base</div>
-                  <div className="font-bold text-sm text-slate-900 dark:text-slate-100 mt-1">
-                    {nf(modalVer.consumoKwh, 0)} kWh/mes
-                  </div>
-                </div>
-              ) : null}
+              )}
             </div>
 
-            <div className="flex justify-end pt-3 border-t border-slate-200 dark:border-slate-800">
-              <button
-                type="button"
-                onClick={() => setModalVer(null)}
-                className="px-5 py-2 rounded-xl text-xs font-bold bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 transition-colors"
-              >
-                Cerrar
-              </button>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-slate-200 dark:border-slate-800">
+              <span className="text-[11px] text-slate-400">
+                Creada por {modalVer.usuarioNombre || 'Sistema'} el{' '}
+                {new Date(modalVer.fechaCreacion).toLocaleString('es-CO')}
+              </span>
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <button
+                  type="button"
+                  onClick={() => generateProposalPdf(buildPdfDataFromCotizacion(modalVer))}
+                  className="flex-1 sm:flex-initial justify-center px-4 py-2 rounded-xl text-xs font-bold text-slate-950 bg-gradient-to-r from-emerald-400 to-teal-300 hover:from-emerald-300 hover:to-teal-200 transition-all cursor-pointer"
+                >
+                  Descargar PDF
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setModalVer(null)}
+                  className="flex-1 sm:flex-initial justify-center px-5 py-2 rounded-xl text-xs font-bold bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 transition-colors cursor-pointer"
+                >
+                  Cerrar
+                </button>
+              </div>
             </div>
           </div>
         </div>

@@ -28,6 +28,7 @@ import { ColombiaMapPicker, MapLocation } from './ColombiaMapPicker';
 import { Cotizador2LiveSummary } from './Cotizador2LiveSummary';
 import { Cotizador2ResultsView } from './Cotizador2ResultsView';
 import { hasPermission, PermissionUser } from '../utils/permissions';
+import { CotizacionItem } from './admin/GestionCotizacionesView';
 
 const nf = (v: number, d = 0) =>
   Number.isFinite(v) && v > 0
@@ -65,7 +66,15 @@ export const SMART_INITIAL_INPUTS: Cotizador2FormInputs = {
   tasaImpositiva: 0.35,
 };
 
-export function Cotizador2Calculator({ currentUser }: { currentUser?: PermissionUser | null }) {
+export function Cotizador2Calculator({
+  currentUser,
+  editingCotizacion,
+  onClearEditingCotizacion,
+}: {
+  currentUser?: PermissionUser | null;
+  editingCotizacion?: CotizacionItem | null;
+  onClearEditingCotizacion?: () => void;
+}) {
   const canCreateQuote = currentUser ? hasPermission(currentUser, 'cotizaciones:crear') : true;
   const canDownloadPdf = currentUser ? hasPermission(currentUser, 'cotizaciones:descargar_pdf') : true;
   const [currentStep, setCurrentStep] = useState<number>(1);
@@ -124,7 +133,7 @@ export function Cotizador2Calculator({ currentUser }: { currentUser?: Permission
       try {
         const res = await fetchLiveTrm();
         if (isMounted) {
-          setInp((prev) => ({ ...prev, trm: res.valor }));
+          setInp((prev) => ({ ...prev, trm: (prev.trm ?? 0) > 0 ? prev.trm : res.valor }));
           setTrmSource(res.fuente);
           setTrmDate(res.fecha);
         }
@@ -206,6 +215,53 @@ export function Cotizador2Calculator({ currentUser }: { currentUser?: Permission
 
   const [saveStatus, setSaveStatus] = useState<{ type: 'ok' | 'error'; text: string } | null>(null);
 
+  // Cargar datos cuando se redirige desde "Editar cotización" en GestionCotizacionesView
+  useEffect(() => {
+    if (!editingCotizacion) return;
+    const raw =
+      editingCotizacion.datosCotizacion && typeof editingCotizacion.datosCotizacion === 'object'
+        ? editingCotizacion.datosCotizacion
+        : {};
+    const savedInputs = raw.formInputs && typeof raw.formInputs === 'object' ? raw.formInputs : {};
+
+    setClientName(editingCotizacion.cliente || raw.clientName || '');
+    setProjectName(editingCotizacion.proyecto || raw.projectName || '');
+
+    const hspVal = Number(editingCotizacion.radiacionHsp) || Number(raw.radiacion) || 4.85;
+    const cityName = editingCotizacion.ciudad || raw.city || 'Medellín';
+    const deptName = editingCotizacion.departamento || raw.department || 'Antioquia';
+
+    setMapLocation({
+      id: 'mapa',
+      nombre: cityName,
+      departamento: deptName,
+      hsp: hspVal,
+      hspMin: Number(raw.hspMin) || Number((hspVal * 0.92).toFixed(2)),
+      hspMax: Number(raw.hspMax) || Number((hspVal * 1.08).toFixed(2)),
+      lat: Number(raw.lat) || 6.2442,
+      lng: Number(raw.lng) || -75.5812,
+      direccion: `${cityName}, ${deptName}`,
+    });
+
+    setInp((prev) => ({
+      ...SMART_INITIAL_INPUTS,
+      ...savedInputs,
+      ciudad: cityName,
+      departamento: deptName,
+      trm: Number(editingCotizacion.trm) || Number(raw.trm) || prev.trm || 4200,
+      consumoKwh: Number(editingCotizacion.consumoKwh) || Number(raw.consumoKwh) || 0,
+      potenciaPanel: Number(editingCotizacion.potenciaPanelW) || Number(raw.potenciaPanel) || 620,
+      areaDisponible:
+        Number(savedInputs.areaDisponible) ||
+        Number(editingCotizacion.areaRequeridaM2) ||
+        Number(raw.areaRequeridaM2) ||
+        54,
+    }));
+
+    setCurrentStep(1);
+    setSaveStatus(null);
+  }, [editingCotizacion]);
+
   const handleGeneratePdf = async () => {
     if (!inp.consumoKwh || !inp.trm) {
       alert('Por favor completa al menos el consumo (kWh) y TRM para generar la cotización.');
@@ -242,14 +298,23 @@ export function Cotizador2Calculator({ currentUser }: { currentUser?: Permission
         retornoAnios: r.retornoAnios,
         tirPct: r.tir,
         flujoAnual: r.flujoAnual,
+        formInputs: inp,
+        lat: mapLocation?.lat,
+        lng: mapLocation?.lng,
+        hspMin: selectedCity.hspMin,
+        hspMax: selectedCity.hspMax,
       };
 
-      // 1. Guardar la cotización en PostgreSQL (public.cotizaciones) con el token JWT del usuario
+      // 1. Guardar o actualizar la cotización en PostgreSQL (public.cotizaciones) con el token JWT del usuario
       const token =
         sessionStorage.getItem('solar_auth_token') || localStorage.getItem('solar_auth_token');
+      const isUpdating = Boolean(editingCotizacion?.id);
+      const endpoint = isUpdating ? `/api/cotizaciones/${editingCotizacion!.id}` : '/api/cotizaciones';
+      const method = isUpdating ? 'PUT' : 'POST';
+
       try {
-        const saveRes = await fetch('/api/cotizaciones', {
-          method: 'POST',
+        const saveRes = await fetch(endpoint, {
+          method,
           headers: {
             'Content-Type': 'application/json',
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -272,14 +337,16 @@ export function Cotizador2Calculator({ currentUser }: { currentUser?: Permission
             retornoAnios: r.retornoAnios,
             tirPct: r.tir,
             ahorroCo2Ton: r.ahorroCo2,
-            datosCotizacion: pdfData, // cotización completa (incluye flujo de caja a 30 años)
+            datosCotizacion: pdfData, // cotización completa (incluye flujo de caja a 30 años y formInputs)
           }),
         });
         const saveData = await saveRes.json().catch(() => ({}));
         if (saveRes.ok) {
           setSaveStatus({
             type: 'ok',
-            text: `Cotización #${saveData.cotizacion?.id} guardada en la base de datos a nombre de ${saveData.cotizacion?.usuarioNombre}.`,
+            text: isUpdating
+              ? `Cotización #${editingCotizacion!.id} actualizada exitosamente en PostgreSQL.`
+              : `Cotización #${saveData.cotizacion?.id} guardada en la base de datos a nombre de ${saveData.cotizacion?.usuarioNombre}.`,
           });
         } else {
           setSaveStatus({
@@ -324,6 +391,31 @@ export function Cotizador2Calculator({ currentUser }: { currentUser?: Permission
 
   return (
     <div className="space-y-8">
+      {/* Banner de Modo Edición de Cotización */}
+      {editingCotizacion && (
+        <div className="rounded-2xl border border-teal-500/40 bg-teal-500/10 px-5 py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
+          <div className="text-xs sm:text-sm text-teal-700 dark:text-teal-300 font-semibold">
+            Editando <strong className="font-extrabold">Cotización #{editingCotizacion.id}</strong> ({editingCotizacion.cliente} — {editingCotizacion.proyecto}). Al llegar al Paso 5 y pulsar <strong>"Guardar y Descargar"</strong> se actualizará este registro en PostgreSQL.
+          </div>
+          {onClearEditingCotizacion && (
+            <button
+              type="button"
+              onClick={() => {
+                onClearEditingCotizacion();
+                setClientName('');
+                setProjectName('');
+                setInp((prev) => ({ ...SMART_INITIAL_INPUTS, trm: prev.trm }));
+                setCurrentStep(1);
+                setSaveStatus(null);
+              }}
+              className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-white dark:bg-slate-900 border border-teal-500/30 text-teal-600 dark:text-teal-400 hover:bg-teal-500/20 transition-colors shrink-0 cursor-pointer"
+            >
+              Crear nueva cotización
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Stepper Superior Interactivo */}
       <div className="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/90 p-4 sm:p-6 shadow-xl backdrop-blur-sm">
         <div className="flex items-center justify-between gap-2 overflow-x-auto pb-2 scrollbar-none">
@@ -335,10 +427,10 @@ export function Cotizador2Calculator({ currentUser }: { currentUser?: Permission
                 key={st.num}
                 type="button"
                 onClick={() => setCurrentStep(st.num)}
-                className="flex items-center gap-3 text-left focus:outline-none group cursor-pointer min-w-[130px] sm:min-w-0 flex-1"
+                className="flex items-center justify-center md:justify-start gap-3 text-left focus:outline-none group cursor-pointer min-w-0 flex-1"
               >
                 <div
-                  className={`w-10 h-10 rounded-2xl flex items-center justify-center font-extrabold text-sm transition-all duration-300 shadow-sm ${
+                  className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl flex items-center justify-center font-extrabold text-sm transition-all duration-300 shadow-sm shrink-0 ${
                     isDone
                       ? 'bg-emerald-500 text-slate-950 ring-2 ring-emerald-500/20'
                       : isCurrent
@@ -373,19 +465,26 @@ export function Cotizador2Calculator({ currentUser }: { currentUser?: Permission
             style={{ width: `${(currentStep / 5) * 100}%` }}
           />
         </div>
+
+        <div className="md:hidden mt-2.5 flex items-center justify-between text-xs">
+          <span className="font-extrabold text-emerald-600 dark:text-emerald-400">
+            Paso {currentStep} de 5: {stepsList[currentStep - 1]?.title}
+          </span>
+          <span className="text-[11px] text-slate-400">{stepsList[currentStep - 1]?.desc}</span>
+        </div>
       </div>
 
       {currentStep < 5 ? (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
           <div className="lg:col-span-8 space-y-6">
             {/* PASO 1: PROYECTO Y UBICACIÓN */}
             {currentStep === 1 && (
-              <div className="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/90 p-6 sm:p-8 shadow-xl space-y-6">
+              <div className="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/90 p-4 sm:p-6 lg:p-8 shadow-xl space-y-6">
                 <div>
                   <span className="text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
                     Paso 1 de 5
                   </span>
-                  <h3 className="text-2xl font-extrabold text-slate-900 dark:text-white">
+                  <h3 className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white">
                     Datos del Proyecto y Ciudad de Colombia
                   </h3>
                   <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
@@ -473,7 +572,7 @@ export function Cotizador2Calculator({ currentUser }: { currentUser?: Permission
                   <button
                     type="button"
                     onClick={() => setCurrentStep(2)}
-                    className="px-6 py-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-extrabold text-sm shadow-lg shadow-emerald-500/25 flex items-center gap-2 cursor-pointer transition-all hover:scale-105"
+                    className="w-full sm:w-auto justify-center px-6 py-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-extrabold text-sm shadow-lg shadow-emerald-500/25 flex items-center gap-2 cursor-pointer transition-all hover:scale-105"
                   >
                     <span>Siguiente: Consumo y Factura</span>
                     <ArrowRight className="w-4 h-4" />
@@ -484,12 +583,12 @@ export function Cotizador2Calculator({ currentUser }: { currentUser?: Permission
 
             {/* PASO 2: CONSUMO Y FACTURA */}
             {currentStep === 2 && (
-              <div className="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/90 p-6 sm:p-8 shadow-xl space-y-6">
+              <div className="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/90 p-4 sm:p-6 lg:p-8 shadow-xl space-y-6">
                 <div>
                   <span className="text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
                     Paso 2 de 5
                   </span>
-                  <h3 className="text-2xl font-extrabold text-slate-900 dark:text-white">
+                  <h3 className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white">
                     Consumo Energético Mensual
                   </h3>
                   <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
@@ -655,12 +754,12 @@ export function Cotizador2Calculator({ currentUser }: { currentUser?: Permission
 
             {/* PASO 3: TECNOLOGÍA Y TECHO */}
             {currentStep === 3 && (
-              <div className="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/90 p-6 sm:p-8 shadow-xl space-y-6">
+              <div className="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/90 p-4 sm:p-6 lg:p-8 shadow-xl space-y-6">
                 <div>
                   <span className="text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
                     Paso 3 de 5
                   </span>
-                  <h3 className="text-2xl font-extrabold text-slate-900 dark:text-white">
+                  <h3 className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white">
                     Tecnología Fotovoltaica y Espacio en Techo
                   </h3>
                   <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
@@ -800,7 +899,7 @@ export function Cotizador2Calculator({ currentUser }: { currentUser?: Permission
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
                     Dimensionamiento resultante en Wp
                   </label>
-                  <div className="h-[42px] px-3.5 flex items-center justify-between rounded-xl bg-slate-100 dark:bg-slate-800/80 text-slate-800 dark:text-slate-200 font-extrabold text-sm tabular-nums">
+                  <div className="min-h-[42px] py-2.5 px-3.5 flex flex-wrap items-center justify-between gap-1 rounded-xl bg-slate-100 dark:bg-slate-800/80 text-slate-800 dark:text-slate-200 font-extrabold text-xs sm:text-sm tabular-nums">
                     <span>
                       {r.requerido.paneles} paneles de {inp.potenciaPanel}W = {nf(r.requerido.wpInstalados)} Wp (
                       {nf(r.requerido.kwp, 2)} kWp)
@@ -811,11 +910,11 @@ export function Cotizador2Calculator({ currentUser }: { currentUser?: Permission
                   </div>
                 </div>
 
-                <div className="flex justify-between items-center pt-4 border-t border-slate-100 dark:border-slate-800">
+                <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
                   <button
                     type="button"
                     onClick={() => setCurrentStep(2)}
-                    className="px-5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-bold flex items-center gap-2 cursor-pointer transition-colors"
+                    className="w-full sm:w-auto justify-center px-5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-bold flex items-center gap-2 cursor-pointer transition-colors"
                   >
                     <ArrowLeft className="w-4 h-4" />
                     <span>Anterior</span>
@@ -824,7 +923,7 @@ export function Cotizador2Calculator({ currentUser }: { currentUser?: Permission
                   <button
                     type="button"
                     onClick={() => setCurrentStep(4)}
-                    className="px-6 py-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-extrabold text-sm shadow-lg shadow-emerald-500/25 flex items-center gap-2 cursor-pointer transition-all hover:scale-105"
+                    className="w-full sm:w-auto justify-center px-6 py-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-extrabold text-sm shadow-lg shadow-emerald-500/25 flex items-center gap-2 cursor-pointer transition-all hover:scale-105"
                   >
                     <span>Siguiente: Finanzas y Ley 1715</span>
                     <ArrowRight className="w-4 h-4" />
@@ -835,12 +934,12 @@ export function Cotizador2Calculator({ currentUser }: { currentUser?: Permission
 
             {/* PASO 4: FINANZAS Y LEY 1715 */}
             {currentStep === 4 && (
-              <div className="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/90 p-6 sm:p-8 shadow-xl space-y-6">
+              <div className="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/90 p-4 sm:p-6 lg:p-8 shadow-xl space-y-6">
                 <div>
                   <span className="text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
                     Paso 4 de 5
                   </span>
-                  <h3 className="text-2xl font-extrabold text-slate-900 dark:text-white">
+                  <h3 className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white">
                     Parámetros Financieros y Ley 1715
                   </h3>
                   <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
@@ -940,11 +1039,11 @@ export function Cotizador2Calculator({ currentUser }: { currentUser?: Permission
                   </div>
                 </div>
 
-                <div className="flex justify-between items-center pt-4 border-t border-slate-100 dark:border-slate-800">
+                <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
                   <button
                     type="button"
                     onClick={() => setCurrentStep(3)}
-                    className="px-5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-bold flex items-center gap-2 cursor-pointer transition-colors"
+                    className="w-full sm:w-auto justify-center px-5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-bold flex items-center gap-2 cursor-pointer transition-colors"
                   >
                     <ArrowLeft className="w-4 h-4" />
                     <span>Anterior</span>
@@ -953,7 +1052,7 @@ export function Cotizador2Calculator({ currentUser }: { currentUser?: Permission
                   <button
                     type="button"
                     onClick={() => setCurrentStep(5)}
-                    className="px-8 py-3.5 rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-500 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-black text-sm shadow-xl shadow-emerald-500/30 flex items-center gap-2 cursor-pointer transition-all hover:scale-105 active:scale-95"
+                    className="w-full sm:w-auto justify-center px-6 sm:px-8 py-3.5 rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-500 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-black text-sm shadow-xl shadow-emerald-500/30 flex items-center gap-2 cursor-pointer transition-all hover:scale-105 active:scale-95"
                   >
                     <Sparkles className="w-4 h-4" />
                     <span>Ver Estudio y Resultados Finales</span>

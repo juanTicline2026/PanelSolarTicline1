@@ -328,7 +328,7 @@ export const RolesPermisosView: React.FC<Props> = ({ currentUser, onUserPermissi
           </div>
 
           {/* Lista de usuarios */}
-          <div className="space-y-1.5 max-h-[520px] overflow-y-auto pr-1">
+          <div className="space-y-1.5 max-h-[260px] lg:max-h-[520px] overflow-y-auto pr-1">
             {loading ? (
               <div className="flex items-center justify-center py-10 gap-2 text-slate-400 text-xs">
                 <Loader2 className="w-4 h-4 animate-spin text-emerald-500" />
@@ -417,12 +417,12 @@ export const RolesPermisosView: React.FC<Props> = ({ currentUser, onUserPermissi
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2 w-full sm:w-auto">
                     <span className="text-xs text-slate-400 font-semibold">Rol Asignado:</span>
                     <select
                       value={currentRol}
                       onChange={(e) => handleApplyRoleDefaults(e.target.value)}
-                      className="text-xs font-bold px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/40 cursor-pointer"
+                      className="w-full sm:w-auto text-xs font-bold px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/40 cursor-pointer"
                     >
                       <option value="Administrador">Administrador</option>
                       <option value="Ingeniero de Proyectos">Ingeniero de Proyectos</option>

@@ -3,7 +3,7 @@ import { ArrowLeft } from 'lucide-react';
 import { Header } from './components/Header';
 import { Cotizador2Calculator } from './components/Cotizador2Calculator';
 import { Login, AuthUser } from './components/Login';
-import { GestionCotizacionesView } from './components/admin/GestionCotizacionesView';
+import { GestionCotizacionesView, CotizacionItem } from './components/admin/GestionCotizacionesView';
 import { GestionUsuariosView } from './components/admin/GestionUsuariosView';
 import { RolesPermisosView } from './components/admin/RolesPermisosView';
 import { hasModuleAccess, hasPermission, isAdminUser } from './utils/permissions';
@@ -16,6 +16,7 @@ export default function App() {
   // Navegación principal: 'calculator' o 'admin'
   const [currentSection, setCurrentSection] = useState<'calculator' | 'admin'>('calculator');
   const [adminSubView, setAdminSubView] = useState<AdminViewType>('cotizaciones');
+  const [editingCotizacion, setEditingCotizacion] = useState<CotizacionItem | null>(null);
 
   // Al iniciar la plataforma siempre arranca en false para exigir Login contra PostgreSQL
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
@@ -159,6 +160,12 @@ export default function App() {
 
 
 
+  const handleEditCotizacionInCalculator = (cot: CotizacionItem) => {
+    setEditingCotizacion(cot);
+    setCurrentSection('calculator');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   const handleOpenPanelAdmin = (view: AdminViewType = 'cotizaciones') => {
     setAdminSubView(view);
     setCurrentSection('admin');
@@ -203,7 +210,10 @@ export default function App() {
           )}
 
           {adminSubView === 'cotizaciones' ? (
-            <GestionCotizacionesView currentUser={currentUser} />
+            <GestionCotizacionesView
+              currentUser={currentUser}
+              onEditCotizacionInCalculator={handleEditCotizacionInCalculator}
+            />
           ) : adminSubView === 'usuarios' ? (
             <GestionUsuariosView currentUser={currentUser} />
           ) : (
@@ -232,7 +242,11 @@ export default function App() {
               </div>
             </div>
 
-            <Cotizador2Calculator currentUser={currentUser} />
+            <Cotizador2Calculator
+              currentUser={currentUser}
+              editingCotizacion={editingCotizacion}
+              onClearEditingCotizacion={() => setEditingCotizacion(null)}
+            />
           </section>
         </main>
       ) : (

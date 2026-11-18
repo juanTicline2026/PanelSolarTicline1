@@ -49,7 +49,7 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <header className="sticky top-0 z-40 w-full backdrop-blur-md border-b transition-colors duration-200 border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-950/90">
-      <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-2 flex items-center justify-between gap-3 sm:gap-4">
+      <div className="w-full max-w-6xl mx-auto px-3 sm:px-6 lg:px-8 py-2 flex items-center justify-between gap-1.5 sm:gap-4">
         
         {/* Bloque 1: Logo Oficial Ticline + Título Cotizador Solar centrado debajo */}
         <div className="flex flex-col items-center justify-center shrink-0">
@@ -57,14 +57,14 @@ export const Header: React.FC<HeaderProps> = ({
             <img
               src="/ticline-logo.png"
               alt="TICLINE EVOLUCIÓN"
-              className="h-7 sm:h-8 w-auto object-contain dark:brightness-0 dark:invert transition-all"
+              className="h-6 sm:h-8 w-auto object-contain dark:brightness-0 dark:invert transition-all"
             />
           </a>
           <button
             type="button"
             onClick={onOpenCalculator}
             style={{ fontFamily: "'Dancing Script', cursive, sans-serif" }}
-            className={`text-lg sm:text-xl font-bold italic leading-tight tracking-wide mt-0.5 transition-colors cursor-pointer whitespace-nowrap ${
+            className={`text-base sm:text-xl font-bold italic leading-tight tracking-wide mt-0.5 transition-colors cursor-pointer whitespace-nowrap ${
               activeSection === 'calculator'
                 ? 'text-emerald-500 dark:text-emerald-400 drop-shadow-sm'
                 : 'text-slate-700 dark:text-slate-300 hover:text-emerald-500 dark:hover:text-emerald-400'
@@ -76,19 +76,20 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Bloque 2: Gestión de Cotizaciones (según permiso cotizaciones:ver) */}
         {canViewCotizaciones && (
-          <nav className="hidden md:flex items-center shrink-0">
+          <nav className="flex items-center shrink-0">
             <button
               type="button"
               onClick={onOpenPanelAdmin || onOpenGestionCotizaciones}
-              className={`text-xs font-bold uppercase tracking-wider px-3.5 py-2 rounded-xl border transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
+              className={`text-[11px] sm:text-xs font-bold uppercase tracking-wider px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl border transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
                 activeSection === 'admin'
                   ? 'bg-emerald-500/15 border-emerald-500 text-emerald-600 dark:text-emerald-400 shadow-sm'
                   : 'border-transparent text-slate-600 dark:text-slate-300 hover:text-emerald-500 hover:bg-slate-100 dark:hover:bg-slate-900'
               }`}
             >
-              <span>Gestion cotizaciones</span>
+              <span className="sm:hidden">Cotizaciones</span>
+              <span className="hidden sm:inline">Gestion cotizaciones</span>
               {esAdmin && (
-                <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-purple-500/15 text-purple-600 dark:text-purple-400 font-extrabold uppercase">
+                <span className="hidden sm:inline-block text-[9px] px-1.5 py-0.5 rounded-full bg-purple-500/15 text-purple-600 dark:text-purple-400 font-extrabold uppercase">
                   Admin
                 </span>
               )}
@@ -105,7 +106,7 @@ export const Header: React.FC<HeaderProps> = ({
               aria-expanded={configOpen}
               aria-haspopup="true"
               title="Configuración"
-              className={`flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-xl border transition-all duration-200 cursor-pointer whitespace-nowrap ${
+              className={`flex items-center gap-1.5 px-2.5 sm:px-3.5 py-2 text-xs font-semibold rounded-xl border transition-all duration-200 cursor-pointer whitespace-nowrap ${
                 configOpen
                   ? 'bg-emerald-500/10 border-emerald-500 text-emerald-600 dark:text-emerald-400 shadow-sm'
                   : 'bg-slate-100 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 hover:border-emerald-500/50 hover:text-emerald-500 dark:hover:text-emerald-400'
@@ -118,7 +119,7 @@ export const Header: React.FC<HeaderProps> = ({
 
             {/* Dropdown flotante con las opciones */}
             {configOpen && (
-              <div className="absolute right-0 mt-2 w-64 rounded-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-slate-200 dark:border-slate-800 shadow-2xl py-2 z-50 animate-fadeIn ring-1 ring-black/5 divide-y divide-slate-100 dark:divide-slate-800/60">
+              <div className="absolute right-0 mt-2 w-64 max-w-[calc(100vw-1.5rem)] rounded-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-slate-200 dark:border-slate-800 shadow-2xl py-2 z-50 animate-fadeIn ring-1 ring-black/5 divide-y divide-slate-100 dark:divide-slate-800/60">
                 <div className="px-3 py-2 text-[10px] font-bold tracking-wider text-slate-400 uppercase">
                   Opciones de Sistema
                 </div>
@@ -179,9 +180,9 @@ export const Header: React.FC<HeaderProps> = ({
         )}
 
         {/* Bloque 4: Usuario, Cerrar Sesión y Tema */}
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
           {onLogout && (
-            <div className="flex items-center gap-2 pl-2 border-l border-slate-200 dark:border-slate-800">
+            <div className="flex items-center gap-1.5 sm:gap-2 pl-1.5 sm:pl-2 border-l border-slate-200 dark:border-slate-800">
               {currentUser && (
                 <span className="hidden xl:inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 text-xs font-semibold text-slate-600 dark:text-slate-300 whitespace-nowrap">
                   <User className="w-3.5 h-3.5 text-emerald-500 shrink-0" />

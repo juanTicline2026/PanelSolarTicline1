@@ -58,7 +58,7 @@ export function Cotizador2ResultsView({
   return (
     <div className="space-y-8 animate-fadeIn">
       {/* Banner de Éxito y Resumen del Proyecto */}
-      <div className="rounded-3xl border border-emerald-500/40 bg-gradient-to-r from-emerald-950/50 via-slate-900 to-slate-900 p-6 sm:p-8 shadow-2xl relative overflow-hidden">
+      <div className="rounded-3xl border border-emerald-500/40 bg-gradient-to-r from-emerald-950/50 via-slate-900 to-slate-900 p-4 sm:p-6 lg:p-8 shadow-2xl relative overflow-hidden">
         <div className="absolute top-0 right-0 w-80 h-80 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative">
           <div>
@@ -66,7 +66,7 @@ export function Cotizador2ResultsView({
               <CheckCircle2 className="w-4 h-4 text-emerald-400" />
               Estudio Fotovoltaico Dimensionado con Éxito (PostgreSQL)
             </div>
-            <h3 className="text-2xl sm:text-3xl font-extrabold text-white font-display">
+            <h3 className="text-xl sm:text-3xl font-extrabold text-white font-display">
               {projectName || 'Proyecto Solar Fotovoltaico'}
             </h3>
             <p className="text-sm text-slate-300 mt-1">
@@ -78,14 +78,14 @@ export function Cotizador2ResultsView({
             </p>
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-3">
+          <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
             {canDownloadPdf ? (
               <button
                 type="button"
                 id="btn-generar-pdf-cotizacion"
                 onClick={onGeneratePdf}
                 disabled={isGeneratingPdf}
-                className="px-6 py-4 rounded-2xl bg-gradient-to-r from-emerald-400 via-teal-300 to-emerald-400 hover:from-emerald-300 hover:to-teal-200 text-slate-950 font-black text-sm shadow-xl shadow-emerald-500/30 hover:shadow-emerald-500/50 transition-all transform hover:scale-105 active:scale-95 flex items-center justify-center gap-2.5 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
+                className="w-full sm:w-auto px-6 py-4 rounded-2xl bg-gradient-to-r from-emerald-400 via-teal-300 to-emerald-400 hover:from-emerald-300 hover:to-teal-200 text-slate-950 font-black text-sm shadow-xl shadow-emerald-500/30 hover:shadow-emerald-500/50 transition-all transform hover:scale-105 active:scale-95 flex items-center justify-center gap-2.5 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
               >
                 {isGeneratingPdf ? (
                   <>
@@ -108,7 +108,7 @@ export function Cotizador2ResultsView({
             <button
               type="button"
               onClick={onModifyData}
-              className="px-4 py-4 rounded-2xl bg-slate-800/80 hover:bg-slate-800 text-slate-200 font-bold text-xs border border-slate-700/80 transition-colors flex items-center justify-center gap-2 cursor-pointer"
+              className="w-full sm:w-auto px-4 py-4 rounded-2xl bg-slate-800/80 hover:bg-slate-800 text-slate-200 font-bold text-xs border border-slate-700/80 transition-colors flex items-center justify-center gap-2 cursor-pointer"
             >
               <RotateCcw className="w-4 h-4" />
               <span>Modificar Datos</span>
@@ -203,7 +203,7 @@ export function Cotizador2ResultsView({
       </div>
 
       {/* Pestañas Interactivas de Detalles */}
-      <div className="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/90 p-6 sm:p-8 shadow-xl space-y-6">
+      <div className="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/90 p-4 sm:p-6 lg:p-8 shadow-xl space-y-6">
         <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-3 overflow-x-auto scrollbar-none">
           {[
             { id: 'formulas', label: 'Memoria de Cálculo y Fórmulas', icon: Calculator },
@@ -255,7 +255,7 @@ export function Cotizador2ResultsView({
                     {nf(r.requerido.potenciaRequeridaW ?? 0, 1)} W
                   </span>
                 </div>
-                <div className="font-mono text-[11px] text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900 p-2 rounded-xl border border-slate-200 dark:border-slate-800">
+                <div className="font-mono text-[11px] text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900 p-2 rounded-xl border border-slate-200 dark:border-slate-800 break-words overflow-x-auto">
                   P = (Consumo × 1000) / (Radiación × 30) = ({inp.consumoKwh ?? 0} × 1000) / ({nf(r.radiacion, 2)} × 30)
                 </div>
               </div>
@@ -270,7 +270,7 @@ export function Cotizador2ResultsView({
                     {r.requerido.paneles} paneles
                   </span>
                 </div>
-                <div className="font-mono text-[11px] text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900 p-2 rounded-xl border border-slate-200 dark:border-slate-800">
+                <div className="font-mono text-[11px] text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900 p-2 rounded-xl border border-slate-200 dark:border-slate-800 break-words overflow-x-auto">
                   Paneles = REDONDEAR.PAR(P / CapacidadPanel) = REDONDEAR.PAR({nf(r.requerido.potenciaRequeridaW ?? 0, 1)} / {inp.potenciaPanel ?? 620})
                 </div>
               </div>
@@ -285,7 +285,7 @@ export function Cotizador2ResultsView({
                     {nf(r.requerido.wpInstalados)} Wp ({nf(r.requerido.kwp, 2)} kWp)
                   </span>
                 </div>
-                <div className="font-mono text-[11px] text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900 p-2 rounded-xl border border-slate-200 dark:border-slate-800">
+                <div className="font-mono text-[11px] text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900 p-2 rounded-xl border border-slate-200 dark:border-slate-800 break-words overflow-x-auto">
                   Potencia = {r.requerido.paneles} paneles × {inp.potenciaPanel ?? 620} W | kWp = {nf(r.requerido.wpInstalados)} / 1000
                 </div>
               </div>
@@ -300,7 +300,7 @@ export function Cotizador2ResultsView({
                     {nf(r.requerido.areaRequerida, 1)} m²
                   </span>
                 </div>
-                <div className="font-mono text-[11px] text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900 p-2 rounded-xl border border-slate-200 dark:border-slate-800">
+                <div className="font-mono text-[11px] text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900 p-2 rounded-xl border border-slate-200 dark:border-slate-800 break-words overflow-x-auto">
                   Área = REDONDEAR.PAR({r.requerido.paneles} × {tamanoPanelM2(inp.potenciaPanel ?? 620)}) = {nf(r.requerido.areaRequerida, 1)} m²
                 </div>
               </div>
@@ -315,7 +315,7 @@ export function Cotizador2ResultsView({
                     {nf(r.requerido.produccionMensual, 1)} kWh/mes
                   </span>
                 </div>
-                <div className="font-mono text-[11px] text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900 p-2 rounded-xl border border-slate-200 dark:border-slate-800">
+                <div className="font-mono text-[11px] text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900 p-2 rounded-xl border border-slate-200 dark:border-slate-800 break-words overflow-x-auto">
                   Producción = ({r.requerido.paneles} × {inp.potenciaPanel ?? 620} × {nf(r.radiacion, 2)} × 30) / 1000
                 </div>
               </div>
@@ -330,7 +330,7 @@ export function Cotizador2ResultsView({
                     {cop(r.ahorroMensualCop)}
                   </span>
                 </div>
-                <div className="font-mono text-[11px] text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900 p-2 rounded-xl border border-slate-200 dark:border-slate-800">
+                <div className="font-mono text-[11px] text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900 p-2 rounded-xl border border-slate-200 dark:border-slate-800 break-words overflow-x-auto">
                   Tarifa: ${nf(r.valorKwhFactura, 2)} COP/kWh | Ahorro = {nf(r.generacionMensualConsumir)} kWh × ${nf(r.valorKwhFactura, 2)}
                 </div>
               </div>
@@ -345,7 +345,7 @@ export function Cotizador2ResultsView({
                     {cop(r.costoSolucionFinal)}
                   </span>
                 </div>
-                <div className="font-mono text-[11px] text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900 p-2 rounded-xl border border-slate-200 dark:border-slate-800 space-y-0.5">
+                <div className="font-mono text-[11px] text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900 p-2 rounded-xl border border-slate-200 dark:border-slate-800 space-y-0.5 break-words overflow-x-auto">
                   <div>
                     Base = {nf(r.requerido.wpInstalados)} Wp × ${r.costoVatio} USD/Wp × ${nf(inp.trm ?? 0)} COP = {cop(r.costoSolucion)}
                   </div>
@@ -365,7 +365,7 @@ export function Cotizador2ResultsView({
                     {nf(r.retornoAnios)} años ({nf(r.retornoMeses)} meses) · TIR: {pct(r.tir)}
                   </span>
                 </div>
-                <div className="font-mono text-[11px] text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900 p-2 rounded-xl border border-slate-200 dark:border-slate-800">
+                <div className="font-mono text-[11px] text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900 p-2 rounded-xl border border-slate-200 dark:border-slate-800 break-words overflow-x-auto">
                   Modelo 30 años con ahorro de energía, deducción de renta (50%) y depreciación acelerada
                 </div>
               </div>

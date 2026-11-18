@@ -259,8 +259,14 @@ export async function updateCotizacion(req: AuthenticatedRequest, res: Response)
         ahorro_mensual_cop = COALESCE($10, ahorro_mensual_cop),
         retorno_anios = COALESCE($11, retorno_anios),
         tir_pct = COALESCE($12, tir_pct),
+        area_requerida_m2 = COALESCE($13, area_requerida_m2),
+        produccion_mensual_kwh = COALESCE($14, produccion_mensual_kwh),
+        radiacion_hsp = COALESCE($15, radiacion_hsp),
+        trm = COALESCE($16, trm),
+        ahorro_co2_ton = COALESCE($17, ahorro_co2_ton),
+        datos_cotizacion = COALESCE($18::jsonb, datos_cotizacion),
         fecha_actualizacion = CURRENT_TIMESTAMP
-      WHERE id = $13
+      WHERE id = $19
       RETURNING
         id,
         usuario_id AS "usuarioId",
@@ -274,10 +280,16 @@ export async function updateCotizacion(req: AuthenticatedRequest, res: Response)
         potencia_panel_w AS "potenciaPanelW",
         paneles,
         kwp,
+        area_requerida_m2 AS "areaRequeridaM2",
+        produccion_mensual_kwh AS "produccionMensualKwh",
+        radiacion_hsp AS "radiacionHsp",
+        trm,
         inversion_cop AS "inversionCop",
         ahorro_mensual_cop AS "ahorroMensualCop",
         retorno_anios AS "retornoAnios",
         tir_pct AS "tirPct",
+        ahorro_co2_ton AS "ahorroCo2Ton",
+        datos_cotizacion AS "datosCotizacion",
         fecha_creacion AS "fechaCreacion",
         fecha_actualizacion AS "fechaActualizacion"`,
       [
@@ -293,6 +305,12 @@ export async function updateCotizacion(req: AuthenticatedRequest, res: Response)
         b.ahorroMensualCop !== undefined ? num(b.ahorroMensualCop) : null,
         b.retornoAnios !== undefined ? num(b.retornoAnios) : null,
         b.tirPct !== undefined ? num(b.tirPct) : null,
+        b.areaRequeridaM2 !== undefined ? num(b.areaRequeridaM2) : null,
+        b.produccionMensualKwh !== undefined ? num(b.produccionMensualKwh) : null,
+        b.radiacionHsp !== undefined ? num(b.radiacionHsp) : null,
+        b.trm !== undefined ? num(b.trm) : null,
+        b.ahorroCo2Ton !== undefined ? num(b.ahorroCo2Ton) : null,
+        b.datosCotizacion !== undefined ? JSON.stringify(b.datosCotizacion) : null,
         id,
       ]
     );
