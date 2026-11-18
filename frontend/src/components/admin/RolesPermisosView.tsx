@@ -17,6 +17,8 @@ import {
   Clock,
   KeyRound,
   ShieldAlert,
+  FileText,
+  Users,
 } from 'lucide-react';
 import { hasPermission, PermissionUser } from '../../utils/permissions';
 
@@ -120,6 +122,17 @@ export const RolesPermisosView: React.FC<Props> = ({ currentUser, onUserPermissi
       setSelectedPermisos(selectedPermisos.filter((p) => p !== idPermiso));
     } else {
       setSelectedPermisos([...selectedPermisos, idPermiso]);
+    }
+  };
+
+  // Activar o desactivar todos los permisos de un módulo
+  const toggleModulo = (permIds: string[]) => {
+    const todosActivos = permIds.length > 0 && permIds.every((id) => selectedPermisos.includes(id));
+    if (todosActivos) {
+      setSelectedPermisos(selectedPermisos.filter((p) => !permIds.includes(p)));
+    } else {
+      const merged = new Set([...selectedPermisos, ...permIds]);
+      setSelectedPermisos(Array.from(merged));
     }
   };
 
@@ -461,52 +474,152 @@ export const RolesPermisosView: React.FC<Props> = ({ currentUser, onUserPermissi
                 </div>
               </div>
 
-              {/* Grilla de Permisos del Sistema */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {catalogo.map((perm) => {
-                  const activo = selectedPermisos.includes(perm.id);
+              {/* Permisos agrupados por Módulo: Gestión de Cotizaciones y Gestión de Usuarios */}
+              <div className="space-y-5">
+                {[
+                  {
+                    id: 'gestion_cotizaciones',
+                    titulo: 'Módulo: Gestión de Cotizaciones',
+                    subtitulo: 'Creación, consulta, descarga en PDF, eliminación y costos del cotizador',
+                    color: 'emerald',
+                    Icon: FileText,
+                    permisos: catalogo.filter(
+                      (p) =>
+                        p.id.startsWith('cotizaciones:') ||
+                        p.id.startsWith('precios:') ||
+                        p.id === 'modulo:cotizador' ||
+                        p.id === 'modulo:gestion_cotizaciones'
+                    ),
+                  },
+                  {
+                    id: 'gestion_usuarios',
+                    titulo: 'Módulo: Gestión de Usuarios',
+                    subtitulo: 'Visualización, creación, edición de usuarios y administración de roles',
+                    color: 'teal',
+                    Icon: Users,
+                    permisos: catalogo.filter(
+                      (p) =>
+                        p.id.startsWith('usuarios:') ||
+                        p.id.startsWith('roles:') ||
+                        p.id === 'modulo:gestion_usuarios' ||
+                        p.id === 'modulo:roles_permisos'
+                    ),
+                  },
+                ].map((modulo) => {
+                  const moduloIds = modulo.permisos.map((p) => p.id);
+                  const activosCount = moduloIds.filter((id) => selectedPermisos.includes(id)).length;
+                  const todosActivos = moduloIds.length > 0 && activosCount === moduloIds.length;
+                  const ModuloIcon = modulo.Icon;
+
                   return (
                     <div
-                      key={perm.id}
-                      onClick={() => togglePermiso(perm.id)}
-                      className={`p-4 rounded-2xl border transition-all duration-200 cursor-pointer flex flex-col justify-between gap-2 ${
-                        activo
-                          ? 'bg-emerald-500/10 dark:bg-emerald-500/15 border-emerald-500/50 shadow-sm'
-                          : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
-                      }`}
+                      key={modulo.id}
+                      className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden"
                     >
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex-1">
-                          <div className="text-xs font-bold text-slate-900 dark:text-slate-100 leading-snug">
-                            {perm.nombre}
+                      {/* Cabecera del Módulo */}
+                      <div className="p-4 sm:px-5 bg-slate-50/80 dark:bg-slate-950/60 border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div className="flex items-start sm:items-center gap-3">
+                          <div
+                            className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+                              modulo.color === 'emerald'
+                                ? 'bg-emerald-500/15 text-emerald-500'
+                                : 'bg-teal-500/15 text-teal-500'
+                            }`}
+                          >
+                            <ModuloIcon className="w-5 h-5" />
                           </div>
-                          <div className="text-[10px] text-slate-400 mt-1 leading-snug">
-                            {perm.descripcion}
+                          <div>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <h3 className="text-sm font-extrabold text-slate-900 dark:text-white">
+                                {modulo.titulo}
+                              </h3>
+                              <span
+                                className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                                  activosCount > 0
+                                    ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                                    : 'bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
+                                }`}
+                              >
+                                {activosCount} de {moduloIds.length} activos
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-slate-400 mt-0.5">{modulo.subtitulo}</p>
                           </div>
                         </div>
 
-                        <div className="mt-0.5">
-                          {activo ? (
-                            <CheckSquare className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                          ) : (
-                            <Square className="w-4 h-4 text-slate-400 flex-shrink-0" />
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-[9px] font-mono">
-                        <span className="text-slate-400 uppercase truncate max-w-[150px]">
-                          {perm.id}
-                        </span>
-                        <span
-                          className={`font-bold ${
-                            activo
-                              ? 'text-emerald-600 dark:text-emerald-400'
-                              : 'text-slate-400'
+                        <button
+                          type="button"
+                          onClick={() => toggleModulo(moduloIds)}
+                          className={`w-full sm:w-auto px-3.5 py-2 rounded-xl text-xs font-bold border transition-all flex items-center justify-center gap-2 cursor-pointer shrink-0 ${
+                            todosActivos
+                              ? 'bg-emerald-500/15 border-emerald-500/50 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20'
+                              : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-emerald-500/50 hover:text-emerald-500'
                           }`}
                         >
-                          {activo ? 'ACTIVADO' : 'INACTIVO'}
-                        </span>
+                          {todosActivos ? (
+                            <>
+                              <CheckSquare className="w-4 h-4 text-emerald-500" />
+                              <span>Desactivar módulo</span>
+                            </>
+                          ) : (
+                            <>
+                              <Square className="w-4 h-4" />
+                              <span>Activar módulo</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+
+                      {/* Permisos internos del Módulo */}
+                      <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {modulo.permisos.map((perm) => {
+                          const activo = selectedPermisos.includes(perm.id);
+                          return (
+                            <div
+                              key={perm.id}
+                              onClick={() => togglePermiso(perm.id)}
+                              className={`p-4 rounded-2xl border transition-all duration-200 cursor-pointer flex flex-col justify-between gap-2 ${
+                                activo
+                                  ? 'bg-emerald-500/10 dark:bg-emerald-500/15 border-emerald-500/50 shadow-sm'
+                                  : 'bg-slate-50/50 dark:bg-slate-950/50 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+                              }`}
+                            >
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="flex-1">
+                                  <div className="text-xs font-bold text-slate-900 dark:text-slate-100 leading-snug">
+                                    {perm.nombre}
+                                  </div>
+                                  <div className="text-[10px] text-slate-400 mt-1 leading-snug">
+                                    {perm.descripcion}
+                                  </div>
+                                </div>
+
+                                <div className="mt-0.5">
+                                  {activo ? (
+                                    <CheckSquare className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+                                  ) : (
+                                    <Square className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                                  )}
+                                </div>
+                              </div>
+
+                              <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-[9px] font-mono">
+                                <span className="text-slate-400 uppercase truncate max-w-[150px]">
+                                  {perm.id}
+                                </span>
+                                <span
+                                  className={`font-bold ${
+                                    activo
+                                      ? 'text-emerald-600 dark:text-emerald-400'
+                                      : 'text-slate-400'
+                                  }`}
+                                >
+                                  {activo ? 'ACTIVADO' : 'INACTIVO'}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   );

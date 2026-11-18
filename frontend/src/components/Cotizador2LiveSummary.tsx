@@ -1,4 +1,3 @@
-import { Info, Sparkles } from 'lucide-react';
 import { Cotizador2Results } from '../utils/cotizador2Engine';
 import { ColombianCity } from '../constants/colombianCities';
 
@@ -30,9 +29,6 @@ export function Cotizador2LiveSummary({ r, selectedCity }: Props) {
               Dimensionamiento en Vivo
             </h4>
           </div>
-          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-            PostgreSQL + Backend
-          </span>
         </div>
 
         <div className="space-y-3">
@@ -86,18 +82,6 @@ export function Cotizador2LiveSummary({ r, selectedCity }: Props) {
               <span className="font-bold text-amber-500">TIR: {pct(r.tir)}</span>
             </div>
           </div>
-
-          {r.requerido.paneles === 0 ? (
-            <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-[11px] flex items-center gap-2">
-              <Info className="w-3.5 h-3.5 shrink-0" />
-              <span>Inicia en cero. Al ingresar tus datos en el formulario se calculará automáticamente en tiempo real.</span>
-            </div>
-          ) : (
-            <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-[11px] flex items-center gap-2">
-              <Sparkles className="w-3.5 h-3.5 shrink-0" />
-              <span>Dimensionamiento calculado con las fórmulas de PostgreSQL.</span>
-            </div>
-          )}
         </div>
       </div>
     </div>

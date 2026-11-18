@@ -256,7 +256,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
           )}
 
           {/* ==================== FORMULARIO DE LOGIN ==================== */}
-          <form onSubmit={handleLoginSubmit} className="space-y-4">
+          <form onSubmit={handleLoginSubmit} autoComplete="off" className="space-y-4">
             <div className="space-y-1.5">
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">
                 Correo Electrónico
@@ -265,6 +265,10 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                 <Mail className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
                 <input
                   type="email"
+                  name="solar_login_email"
+                  autoComplete="off"
+                  readOnly
+                  onFocus={(e) => e.currentTarget.removeAttribute('readonly')}
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -282,6 +286,10 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                 <Lock className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
                 <input
                   type={showPassword ? 'text' : 'password'}
+                  name="solar_login_password"
+                  autoComplete="new-password"
+                  readOnly
+                  onFocus={(e) => e.currentTarget.removeAttribute('readonly')}
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}

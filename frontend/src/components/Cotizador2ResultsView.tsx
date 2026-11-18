@@ -4,7 +4,6 @@ import {
   Loader2,
   Calculator,
   Zap,
-  CheckCircle2,
   Leaf,
   DollarSign,
   Layers,
@@ -62,10 +61,6 @@ export function Cotizador2ResultsView({
         <div className="absolute top-0 right-0 w-80 h-80 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative">
           <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-400 text-xs font-extrabold border border-emerald-500/30 mb-3">
-              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-              Estudio Fotovoltaico Dimensionado con Éxito (PostgreSQL)
-            </div>
             <h3 className="text-xl sm:text-3xl font-extrabold text-white font-display">
               {projectName || 'Proyecto Solar Fotovoltaico'}
             </h3>

@@ -11,16 +11,42 @@ import { hasModuleAccess, hasPermission, isAdminUser } from './utils/permissions
 type AdminViewType = 'cotizaciones' | 'usuarios' | 'roles';
 
 export default function App() {
-  const [darkMode, setDarkMode] = useState<boolean>(() => true);
+  const [darkMode, setDarkMode] = useState<boolean>(() => {
+    const saved = sessionStorage.getItem('solar_dark_mode');
+    return saved !== null ? saved === 'true' : true;
+  });
 
-  // Navegación principal: 'calculator' o 'admin'
-  const [currentSection, setCurrentSection] = useState<'calculator' | 'admin'>('calculator');
-  const [adminSubView, setAdminSubView] = useState<AdminViewType>('cotizaciones');
-  const [editingCotizacion, setEditingCotizacion] = useState<CotizacionItem | null>(null);
+  // Navegación principal: 'calculator' o 'admin' (persistida en sessionStorage para mantener vista al recargar)
+  const [currentSection, setCurrentSection] = useState<'calculator' | 'admin'>(() => {
+    const saved = sessionStorage.getItem('solar_current_section');
+    return saved === 'admin' ? 'admin' : 'calculator';
+  });
+  const [adminSubView, setAdminSubView] = useState<AdminViewType>(() => {
+    const saved = sessionStorage.getItem('solar_admin_subview');
+    return saved === 'usuarios' || saved === 'roles' ? saved : 'cotizaciones';
+  });
+  const [editingCotizacion, setEditingCotizacion] = useState<CotizacionItem | null>(() => {
+    try {
+      const raw = sessionStorage.getItem('solar_editing_cotizacion');
+      return raw ? (JSON.parse(raw) as CotizacionItem) : null;
+    } catch {
+      return null;
+    }
+  });
 
-  // Al iniciar la plataforma siempre arranca en false para exigir Login contra PostgreSQL
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
-  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
+  // Restaurar sesión activa desde sessionStorage si el usuario ya inició sesión
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => {
+    try {
+      const token = sessionStorage.getItem('solar_auth_token');
+      const rawUser = sessionStorage.getItem('solar_auth_user');
+      return token && rawUser ? (JSON.parse(rawUser) as AuthUser) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
+    return Boolean(sessionStorage.getItem('solar_auth_token') && sessionStorage.getItem('solar_auth_user'));
+  });
 
   const handleLoginSuccess = (token: string, user: AuthUser) => {
     sessionStorage.setItem('solar_auth_token', token);
@@ -34,12 +60,42 @@ export default function App() {
     localStorage.removeItem('solar_auth_user');
     sessionStorage.removeItem('solar_auth_token');
     sessionStorage.removeItem('solar_auth_user');
+    sessionStorage.removeItem('solar_current_section');
+    sessionStorage.removeItem('solar_admin_subview');
+    sessionStorage.removeItem('solar_editing_cotizacion');
+    sessionStorage.removeItem('solar_cotizador_draft');
     setCurrentUser(null);
     setIsAuthenticated(false);
+    setEditingCotizacion(null);
     setCurrentSection('calculator');
   };
 
-  // Limpiar cualquier token viejo al cargar por primera vez para obligar a pasar por el Login
+  // Persistir vista y tema activos en sessionStorage para sobrevivir recargas de página
+  useEffect(() => {
+    sessionStorage.setItem('solar_dark_mode', String(darkMode));
+  }, [darkMode]);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      sessionStorage.setItem('solar_current_section', currentSection);
+    }
+  }, [isAuthenticated, currentSection]);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      sessionStorage.setItem('solar_admin_subview', adminSubView);
+    }
+  }, [isAuthenticated, adminSubView]);
+
+  useEffect(() => {
+    if (editingCotizacion) {
+      sessionStorage.setItem('solar_editing_cotizacion', JSON.stringify(editingCotizacion));
+    } else {
+      sessionStorage.removeItem('solar_editing_cotizacion');
+    }
+  }, [editingCotizacion]);
+
+  // Limpiar cualquier token viejo en localStorage al cargar por primera vez
   useEffect(() => {
     localStorage.removeItem('solar_auth_token');
     localStorage.removeItem('solar_auth_user');
@@ -54,6 +110,10 @@ export default function App() {
       const res = await fetch('/api/auth/me', {
         headers: { Authorization: `Bearer ${token}` },
       });
+      if (res.status === 401 || res.status === 403) {
+        handleLogout();
+        return;
+      }
       if (!res.ok) return;
       const data = await res.json();
       if (data?.user) {
@@ -161,6 +221,7 @@ export default function App() {
 
 
   const handleEditCotizacionInCalculator = (cot: CotizacionItem) => {
+    sessionStorage.removeItem('solar_cotizador_draft');
     setEditingCotizacion(cot);
     setCurrentSection('calculator');
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -235,10 +296,6 @@ export default function App() {
                 <h2 className={`text-2xl sm:text-3xl font-extrabold font-display ${darkMode ? 'text-white' : 'text-slate-900'} tracking-tight drop-shadow-sm`}>
                   Cotizador Solar Fotovoltaico
                 </h2>
-              </div>
-              <div className={`flex items-center gap-2 text-xs font-medium ${darkMode ? 'text-slate-300' : 'text-slate-600'}`}>
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-                <span>Fórmulas Oficiales de Ingeniería Solar para Ciudades de Colombia</span>
               </div>
             </div>
 

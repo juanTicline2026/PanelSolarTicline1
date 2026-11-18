@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import {
   Loader2,
   CheckCircle2,
@@ -66,6 +66,94 @@ export const SMART_INITIAL_INPUTS: Cotizador2FormInputs = {
   tasaImpositiva: 0.35,
 };
 
+function buildStateFromCotizacion(cot: CotizacionItem) {
+  const raw =
+    cot.datosCotizacion && typeof cot.datosCotizacion === 'object' ? cot.datosCotizacion : {};
+  const savedInputs = raw.formInputs && typeof raw.formInputs === 'object' ? raw.formInputs : {};
+
+  const hspVal = Number(cot.radiacionHsp) || Number(raw.radiacion) || 4.85;
+  const cityName = cot.ciudad || raw.city || 'Medellín';
+  const deptName = cot.departamento || raw.department || 'Antioquia';
+
+  let consumoVal =
+    Number(cot.consumoKwh) || Number(raw.consumoKwh) || Number(savedInputs.consumoKwh) || 0;
+  if (consumoVal <= 0) {
+    const kwpVal = Number(cot.kwp) || Number(raw.kwp) || 0;
+    if (kwpVal > 0) {
+      consumoVal = Math.round(kwpVal * hspVal * 30);
+    }
+  }
+
+  return {
+    clientName: cot.cliente || raw.clientName || '',
+    projectName: cot.proyecto || raw.projectName || '',
+    mapLocation: {
+      id: 'mapa',
+      nombre: cityName,
+      departamento: deptName,
+      hsp: hspVal,
+      hspMin: Number(raw.hspMin) || Number((hspVal * 0.92).toFixed(2)),
+      hspMax: Number(raw.hspMax) || Number((hspVal * 1.08).toFixed(2)),
+      lat: Number(raw.lat) || 6.2442,
+      lng: Number(raw.lng) || -75.5812,
+      direccion: `${cityName}, ${deptName}`,
+    } as ColombianCity & { lat: number; lng: number; direccion: string },
+    inp: {
+      ...SMART_INITIAL_INPUTS,
+      ...savedInputs,
+      ciudad: cityName,
+      departamento: deptName,
+      trm: Number(cot.trm) || Number(raw.trm) || Number(savedInputs.trm) || 4200,
+      consumoKwh: consumoVal,
+      potenciaPanel:
+        Number(cot.potenciaPanelW) || Number(raw.potenciaPanel) || Number(savedInputs.potenciaPanel) || 620,
+      areaDisponible:
+        Number(savedInputs.areaDisponible) ||
+        Number(cot.areaRequeridaM2) ||
+        Number(raw.areaRequeridaM2) ||
+        54,
+    } as Cotizador2FormInputs,
+  };
+}
+
+function getInitialCalculatorState(editingCotizacion?: CotizacionItem | null) {
+  try {
+    const raw = sessionStorage.getItem('solar_cotizador_draft');
+    const parsed = raw ? JSON.parse(raw) : null;
+    const expectedEditingId = editingCotizacion?.id ?? null;
+    if (parsed && (parsed.editingId ?? null) === expectedEditingId) {
+      return {
+        currentStep: typeof parsed.currentStep === 'number' ? parsed.currentStep : 1,
+        inp: parsed.inp ? { ...SMART_INITIAL_INPUTS, ...parsed.inp } : SMART_INITIAL_INPUTS,
+        projectName: String(parsed.projectName || ''),
+        clientName: String(parsed.clientName || ''),
+        mapLocation: parsed.mapLocation || null,
+      };
+    }
+  } catch {
+    // Continuar
+  }
+
+  if (editingCotizacion) {
+    const loaded = buildStateFromCotizacion(editingCotizacion);
+    return {
+      currentStep: 1,
+      inp: loaded.inp,
+      projectName: loaded.projectName,
+      clientName: loaded.clientName,
+      mapLocation: loaded.mapLocation,
+    };
+  }
+
+  return {
+    currentStep: 1,
+    inp: SMART_INITIAL_INPUTS,
+    projectName: '',
+    clientName: '',
+    mapLocation: null,
+  };
+}
+
 export function Cotizador2Calculator({
   currentUser,
   editingCotizacion,
@@ -77,17 +165,21 @@ export function Cotizador2Calculator({
 }) {
   const canCreateQuote = currentUser ? hasPermission(currentUser, 'cotizaciones:crear') : true;
   const canDownloadPdf = currentUser ? hasPermission(currentUser, 'cotizaciones:descargar_pdf') : true;
-  const [currentStep, setCurrentStep] = useState<number>(1);
-  const [inp, setInp] = useState<Cotizador2FormInputs>(SMART_INITIAL_INPUTS);
-  const [projectName, setProjectName] = useState('');
-  const [clientName, setClientName] = useState('');
+  const [initialState] = useState(() => getInitialCalculatorState(editingCotizacion));
+  const [currentStep, setCurrentStep] = useState<number>(initialState.currentStep);
+  const [inp, setInp] = useState<Cotizador2FormInputs>(initialState.inp);
+  const [projectName, setProjectName] = useState<string>(initialState.projectName);
+  const [clientName, setClientName] = useState<string>(initialState.clientName);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [trmLoading, setTrmLoading] = useState<boolean>(true);
   const [trmSource, setTrmSource] = useState<string>('');
   const [trmDate, setTrmDate] = useState<string>('');
 
   // Ubicación seleccionada en el mapa con HSP oficial (NASA POWER vía Backend)
-  const [mapLocation, setMapLocation] = useState<(ColombianCity & { lat: number; lng: number; direccion: string }) | null>(null);
+  const [mapLocation, setMapLocation] = useState<(ColombianCity & { lat: number; lng: number; direccion: string }) | null>(
+    initialState.mapLocation
+  );
+  const lastEditingIdRef = useRef<number | null>(editingCotizacion?.id ?? null);
   const [hspLoading, setHspLoading] = useState(false);
   const [hspError, setHspError] = useState('');
 
@@ -215,49 +307,41 @@ export function Cotizador2Calculator({
 
   const [saveStatus, setSaveStatus] = useState<{ type: 'ok' | 'error'; text: string } | null>(null);
 
-  // Cargar datos cuando se redirige desde "Editar cotización" en GestionCotizacionesView
+  // Guardar borrador en sessionStorage para conservar los datos y el paso al recargar la página
   useEffect(() => {
-    if (!editingCotizacion) return;
-    const raw =
-      editingCotizacion.datosCotizacion && typeof editingCotizacion.datosCotizacion === 'object'
-        ? editingCotizacion.datosCotizacion
-        : {};
-    const savedInputs = raw.formInputs && typeof raw.formInputs === 'object' ? raw.formInputs : {};
+    try {
+      sessionStorage.setItem(
+        'solar_cotizador_draft',
+        JSON.stringify({
+          editingId: editingCotizacion?.id ?? null,
+          currentStep,
+          inp,
+          projectName,
+          clientName,
+          mapLocation,
+        })
+      );
+    } catch {
+      // Ignorar errores de cuota de almacenamiento
+    }
+  }, [editingCotizacion?.id, currentStep, inp, projectName, clientName, mapLocation]);
 
-    setClientName(editingCotizacion.cliente || raw.clientName || '');
-    setProjectName(editingCotizacion.proyecto || raw.projectName || '');
+  // Cargar datos cuando cambia la cotización seleccionada en modo edición después del montaje
+  useEffect(() => {
+    if (!editingCotizacion) {
+      lastEditingIdRef.current = null;
+      return;
+    }
+    if (lastEditingIdRef.current === editingCotizacion.id) {
+      return;
+    }
+    lastEditingIdRef.current = editingCotizacion.id;
 
-    const hspVal = Number(editingCotizacion.radiacionHsp) || Number(raw.radiacion) || 4.85;
-    const cityName = editingCotizacion.ciudad || raw.city || 'Medellín';
-    const deptName = editingCotizacion.departamento || raw.department || 'Antioquia';
-
-    setMapLocation({
-      id: 'mapa',
-      nombre: cityName,
-      departamento: deptName,
-      hsp: hspVal,
-      hspMin: Number(raw.hspMin) || Number((hspVal * 0.92).toFixed(2)),
-      hspMax: Number(raw.hspMax) || Number((hspVal * 1.08).toFixed(2)),
-      lat: Number(raw.lat) || 6.2442,
-      lng: Number(raw.lng) || -75.5812,
-      direccion: `${cityName}, ${deptName}`,
-    });
-
-    setInp((prev) => ({
-      ...SMART_INITIAL_INPUTS,
-      ...savedInputs,
-      ciudad: cityName,
-      departamento: deptName,
-      trm: Number(editingCotizacion.trm) || Number(raw.trm) || prev.trm || 4200,
-      consumoKwh: Number(editingCotizacion.consumoKwh) || Number(raw.consumoKwh) || 0,
-      potenciaPanel: Number(editingCotizacion.potenciaPanelW) || Number(raw.potenciaPanel) || 620,
-      areaDisponible:
-        Number(savedInputs.areaDisponible) ||
-        Number(editingCotizacion.areaRequeridaM2) ||
-        Number(raw.areaRequeridaM2) ||
-        54,
-    }));
-
+    const loaded = buildStateFromCotizacion(editingCotizacion);
+    setClientName(loaded.clientName);
+    setProjectName(loaded.projectName);
+    setMapLocation(loaded.mapLocation);
+    setInp(loaded.inp);
     setCurrentStep(1);
     setSaveStatus(null);
   }, [editingCotizacion]);
@@ -401,9 +485,11 @@ export function Cotizador2Calculator({
             <button
               type="button"
               onClick={() => {
+                sessionStorage.removeItem('solar_cotizador_draft');
                 onClearEditingCotizacion();
                 setClientName('');
                 setProjectName('');
+                setMapLocation(null);
                 setInp((prev) => ({ ...SMART_INITIAL_INPUTS, trm: prev.trm }));
                 setCurrentStep(1);
                 setSaveStatus(null);
@@ -430,25 +516,23 @@ export function Cotizador2Calculator({
                 className="flex items-center justify-center md:justify-start gap-3 text-left focus:outline-none group cursor-pointer min-w-0 flex-1"
               >
                 <div
-                  className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl flex items-center justify-center font-extrabold text-sm transition-all duration-300 shadow-sm shrink-0 ${
-                    isDone
-                      ? 'bg-emerald-500 text-slate-950 ring-2 ring-emerald-500/20'
-                      : isCurrent
-                        ? 'bg-gradient-to-tr from-emerald-400 via-teal-400 to-amber-300 text-slate-950 ring-4 ring-emerald-400/30 scale-105'
-                        : 'bg-slate-100 dark:bg-slate-800 text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200'
-                  }`}
+                  className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl flex items-center justify-center font-extrabold text-sm transition-all duration-300 shadow-sm shrink-0 ${isDone
+                    ? 'bg-emerald-500 text-slate-950 ring-2 ring-emerald-500/20'
+                    : isCurrent
+                      ? 'bg-gradient-to-tr from-emerald-400 via-teal-400 to-amber-300 text-slate-950 ring-4 ring-emerald-400/30 scale-105'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200'
+                    }`}
                 >
                   {isDone ? <Check className="w-5 h-5 stroke-[3]" /> : st.num}
                 </div>
                 <div className="hidden md:block">
                   <div
-                    className={`text-xs font-bold transition-colors ${
-                      isCurrent
-                        ? 'text-emerald-600 dark:text-emerald-400 font-extrabold'
-                        : isDone
-                          ? 'text-slate-800 dark:text-slate-200'
-                          : 'text-slate-400'
-                    }`}
+                    className={`text-xs font-bold transition-colors ${isCurrent
+                      ? 'text-emerald-600 dark:text-emerald-400 font-extrabold'
+                      : isDone
+                        ? 'text-slate-800 dark:text-slate-200'
+                        : 'text-slate-400'
+                      }`}
                   >
                     {st.title}
                   </div>
@@ -667,11 +751,10 @@ export function Cotizador2Calculator({
                           key={kwhVal}
                           type="button"
                           onClick={() => set({ consumoKwh: kwhVal })}
-                          className={`px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                            inp.consumoKwh === kwhVal
-                              ? 'bg-emerald-500 text-slate-950 shadow-sm'
-                              : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
-                          }`}
+                          className={`px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer ${inp.consumoKwh === kwhVal
+                            ? 'bg-emerald-500 text-slate-950 shadow-sm'
+                            : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
+                            }`}
                         >
                           {kwhVal} kWh
                         </button>
@@ -777,10 +860,6 @@ export function Cotizador2Calculator({
                         Ingresa manualmente el número en Watts (W) de cada panel fotovoltaico.
                       </span>
                     </div>
-                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-xs font-bold self-start sm:self-auto">
-                      <Sparkles className="w-3.5 h-3.5" />
-                      <span>Cálculo fijado a 3.2 m² por panel</span>
-                    </div>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
@@ -829,9 +908,6 @@ export function Cotizador2Calculator({
                         Cálculo Dinámico: Potencia → Nro. Paneles → Área Requerida
                       </h4>
                     </div>
-                    <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
-                      PostgreSQL
-                    </span>
                   </div>
 
                   <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
