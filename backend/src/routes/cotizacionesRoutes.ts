@@ -19,7 +19,7 @@ router.get('/radiacion', getRadiacion);
 router.get('/formulas', getFormulas);
 router.post('/calcular', calcularCotizacion);
 
-// Rutas protegidas con JWT: CRUD completo de cotizaciones
+// Rutas protegidas con JWT: cotizaciones
 router.get('/', verifyJwt, getCotizaciones);
 router.get('/:id', verifyJwt, getCotizacionById);
 router.post('/', verifyJwt, createCotizacion);

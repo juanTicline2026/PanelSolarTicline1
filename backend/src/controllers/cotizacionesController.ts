@@ -211,7 +211,7 @@ export async function createCotizacion(req: AuthenticatedRequest, res: Response)
 
 /**
  * PUT /api/cotizaciones/:id
- * Actualiza una cotización existente (CRUD Update)
+ * Actualiza una cotización existente
  */
 export async function updateCotizacion(req: AuthenticatedRequest, res: Response) {
   if (!isPostgresConnected) {
@@ -326,7 +326,7 @@ export async function updateCotizacion(req: AuthenticatedRequest, res: Response)
 
 /**
  * DELETE /api/cotizaciones/:id
- * Elimina una cotización existente (CRUD Delete)
+ * Elimina una cotización existente
  */
 export async function deleteCotizacion(req: AuthenticatedRequest, res: Response) {
   if (!isPostgresConnected) {

@@ -254,9 +254,7 @@ export const RolesPermisosView: React.FC<Props> = ({ currentUser, onUserPermissi
           <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white mt-1">
             Roles y Permisos de Usuarios
           </h1>
-          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-            Asigna roles oficiales y activa o desactiva facultades del sistema almacenadas en PostgreSQL.
-          </p>
+
         </div>
 
         <div className="flex items-center gap-2.5">
@@ -325,7 +323,7 @@ export const RolesPermisosView: React.FC<Props> = ({ currentUser, onUserPermissi
               <User className="w-4 h-4 text-emerald-500" />
               <span>Usuarios ({usuarios.length})</span>
             </div>
-            <span className="text-[10px] text-slate-400">PostgreSQL</span>
+
           </div>
 
           {/* Buscador de usuarios */}
@@ -359,18 +357,16 @@ export const RolesPermisosView: React.FC<Props> = ({ currentUser, onUserPermissi
                     key={u.id}
                     type="button"
                     onClick={() => handleSelectUser(u)}
-                    className={`w-full text-left p-3 rounded-xl border transition-all duration-200 flex items-start gap-3 cursor-pointer ${
-                      isSelected
-                        ? 'bg-emerald-500/10 dark:bg-emerald-500/15 border-emerald-500 text-slate-900 dark:text-white shadow-sm'
-                        : 'bg-slate-50/50 dark:bg-slate-950/40 border-slate-200/80 dark:border-slate-800/80 hover:border-slate-300 dark:hover:border-slate-700 text-slate-700 dark:text-slate-300'
-                    }`}
+                    className={`w-full text-left p-3 rounded-xl border transition-all duration-200 flex items-start gap-3 cursor-pointer ${isSelected
+                      ? 'bg-emerald-500/10 dark:bg-emerald-500/15 border-emerald-500 text-slate-900 dark:text-white shadow-sm'
+                      : 'bg-slate-50/50 dark:bg-slate-950/40 border-slate-200/80 dark:border-slate-800/80 hover:border-slate-300 dark:hover:border-slate-700 text-slate-700 dark:text-slate-300'
+                      }`}
                   >
                     <div
-                      className={`w-9 h-9 rounded-xl flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5 ${
-                        isSelected
-                          ? 'bg-emerald-500 text-slate-950 font-black shadow-md shadow-emerald-500/30'
-                          : 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
-                      }`}
+                      className={`w-9 h-9 rounded-xl flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5 ${isSelected
+                        ? 'bg-emerald-500 text-slate-950 font-black shadow-md shadow-emerald-500/30'
+                        : 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
+                        }`}
                     >
                       {u.nombre.charAt(0).toUpperCase()}
                     </div>
@@ -385,13 +381,12 @@ export const RolesPermisosView: React.FC<Props> = ({ currentUser, onUserPermissi
                       <div className="text-[11px] text-slate-400 truncate mt-0.5">{u.email}</div>
                       <div className="flex items-center gap-1.5 mt-1.5">
                         <span
-                          className={`text-[10px] font-semibold px-2 py-0.5 rounded-md ${
-                            u.rol === 'Administrador'
-                              ? 'bg-purple-500/15 text-purple-600 dark:text-purple-400 border border-purple-500/20'
-                              : u.rol === 'Ingeniero de Proyectos'
+                          className={`inline-flex items-center whitespace-nowrap text-[10px] font-semibold px-2 py-0.5 rounded-md ${u.rol === 'Administrador'
+                            ? 'bg-purple-500/15 text-purple-600 dark:text-purple-400 border border-purple-500/20'
+                            : u.rol === 'Ingeniero de Proyectos'
                               ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
                               : 'bg-teal-500/15 text-teal-600 dark:text-teal-400 border border-teal-500/20'
-                          }`}
+                            }`}
                         >
                           {u.rol}
                         </span>
@@ -520,11 +515,10 @@ export const RolesPermisosView: React.FC<Props> = ({ currentUser, onUserPermissi
                       <div className="p-4 sm:px-5 bg-slate-50/80 dark:bg-slate-950/60 border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                         <div className="flex items-start sm:items-center gap-3">
                           <div
-                            className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
-                              modulo.color === 'emerald'
-                                ? 'bg-emerald-500/15 text-emerald-500'
-                                : 'bg-teal-500/15 text-teal-500'
-                            }`}
+                            className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${modulo.color === 'emerald'
+                              ? 'bg-emerald-500/15 text-emerald-500'
+                              : 'bg-teal-500/15 text-teal-500'
+                              }`}
                           >
                             <ModuloIcon className="w-5 h-5" />
                           </div>
@@ -534,11 +528,10 @@ export const RolesPermisosView: React.FC<Props> = ({ currentUser, onUserPermissi
                                 {modulo.titulo}
                               </h3>
                               <span
-                                className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                                  activosCount > 0
-                                    ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
-                                    : 'bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
-                                }`}
+                                className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${activosCount > 0
+                                  ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                                  : 'bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
+                                  }`}
                               >
                                 {activosCount} de {moduloIds.length} activos
                               </span>
@@ -550,11 +543,10 @@ export const RolesPermisosView: React.FC<Props> = ({ currentUser, onUserPermissi
                         <button
                           type="button"
                           onClick={() => toggleModulo(moduloIds)}
-                          className={`w-full sm:w-auto px-3.5 py-2 rounded-xl text-xs font-bold border transition-all flex items-center justify-center gap-2 cursor-pointer shrink-0 ${
-                            todosActivos
-                              ? 'bg-emerald-500/15 border-emerald-500/50 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20'
-                              : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-emerald-500/50 hover:text-emerald-500'
-                          }`}
+                          className={`w-full sm:w-auto px-3.5 py-2 rounded-xl text-xs font-bold border transition-all flex items-center justify-center gap-2 cursor-pointer shrink-0 ${todosActivos
+                            ? 'bg-emerald-500/15 border-emerald-500/50 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20'
+                            : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-emerald-500/50 hover:text-emerald-500'
+                            }`}
                         >
                           {todosActivos ? (
                             <>
@@ -578,11 +570,10 @@ export const RolesPermisosView: React.FC<Props> = ({ currentUser, onUserPermissi
                             <div
                               key={perm.id}
                               onClick={() => togglePermiso(perm.id)}
-                              className={`p-4 rounded-2xl border transition-all duration-200 cursor-pointer flex flex-col justify-between gap-2 ${
-                                activo
-                                  ? 'bg-emerald-500/10 dark:bg-emerald-500/15 border-emerald-500/50 shadow-sm'
-                                  : 'bg-slate-50/50 dark:bg-slate-950/50 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
-                              }`}
+                              className={`p-4 rounded-2xl border transition-all duration-200 cursor-pointer flex flex-col justify-between gap-2 ${activo
+                                ? 'bg-emerald-500/10 dark:bg-emerald-500/15 border-emerald-500/50 shadow-sm'
+                                : 'bg-slate-50/50 dark:bg-slate-950/50 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+                                }`}
                             >
                               <div className="flex items-start justify-between gap-2">
                                 <div className="flex-1">
@@ -608,11 +599,10 @@ export const RolesPermisosView: React.FC<Props> = ({ currentUser, onUserPermissi
                                   {perm.id}
                                 </span>
                                 <span
-                                  className={`font-bold ${
-                                    activo
-                                      ? 'text-emerald-600 dark:text-emerald-400'
-                                      : 'text-slate-400'
-                                  }`}
+                                  className={`font-bold ${activo
+                                    ? 'text-emerald-600 dark:text-emerald-400'
+                                    : 'text-slate-400'
+                                    }`}
                                 >
                                   {activo ? 'ACTIVADO' : 'INACTIVO'}
                                 </span>

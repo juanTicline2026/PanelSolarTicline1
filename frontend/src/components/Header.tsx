@@ -168,7 +168,7 @@ export const Header: React.FC<HeaderProps> = ({
                           Gestión de Usuarios
                         </div>
                         <p className="text-[11px] text-slate-400 leading-snug mt-0.5">
-                          CRUD completo de usuarios en base de datos
+                          Administración de usuarios en base de datos
                         </p>
                       </div>
                     </button>

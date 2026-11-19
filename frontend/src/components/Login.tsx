@@ -106,8 +106,8 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
               permisos: Array.isArray(meData.user.permisos)
                 ? meData.user.permisos
                 : Array.isArray(data.user?.permisos)
-                ? data.user.permisos
-                : undefined,
+                  ? data.user.permisos
+                  : undefined,
             };
           }
         }
@@ -136,12 +136,12 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
 
       <div className="w-full max-w-7xl mx-auto relative z-10 animate-fadeIn">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
-          
+
           {/* Columna Izquierda: Presentación Calculadora de Energía Solar + Imagen */}
           <div className="lg:col-span-7 order-2 lg:order-1 flex flex-col gap-5 text-left">
             <div className="inline-flex items-center gap-2 text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-emerald-400">
               <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-              Ingeniería Fotovoltaica · Fórmulas Oficiales Cotizador2 & Radiación Departamental
+              Ingeniería Fotovoltaica
             </div>
 
             <h1
@@ -228,115 +228,105 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
           {/* Columna Derecha: Tarjeta de Login PostgreSQL */}
           <div className="lg:col-span-5 order-1 lg:order-2 w-full max-w-md mx-auto lg:max-w-none">
             <div className="rounded-3xl border border-slate-800 bg-slate-900/90 backdrop-blur-xl p-5 sm:p-8 shadow-2xl space-y-6">
-          {/* Logo y Encabezado */}
-          <div className="text-center space-y-3">
-            <div className="flex justify-center">
-              <img
-                src="/ticline-logo.png"
-                alt="TICLINE"
-                className="h-10 w-auto object-contain brightness-0 invert opacity-95"
-              />
-            </div>
-            <div>
-              <h2 className="text-2xl font-black font-display text-white tracking-tight">
-                Iniciar Sesión
-              </h2>
-              <p className="text-xs text-slate-400 mt-1">
-                Ingresa con tu cuenta registrada en PostgreSQL
-              </p>
-            </div>
-          </div>
+              {/* Logo y Encabezado */}
+              <div className="text-center space-y-3">
+                <div className="flex justify-center">
+                  <img
+                    src="/ticline-logo.png"
+                    alt="TICLINE"
+                    className="h-10 w-auto object-contain brightness-0 invert opacity-95"
+                  />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-black font-display text-white tracking-tight">
+                    Iniciar Sesión
+                  </h2>
 
-          {/* Alerta de Error */}
-          {error && (
-            <div className="p-3.5 rounded-2xl bg-red-500/10 border border-red-500/30 text-xs text-red-400 flex items-start gap-2.5 animate-fadeIn">
-              <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
-              <span>{error}</span>
-            </div>
-          )}
-
-          {/* ==================== FORMULARIO DE LOGIN ==================== */}
-          <form onSubmit={handleLoginSubmit} autoComplete="off" className="space-y-4">
-            <div className="space-y-1.5">
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">
-                Correo Electrónico
-              </label>
-              <div className="relative">
-                <Mail className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                <input
-                  type="email"
-                  name="solar_login_email"
-                  autoComplete="off"
-                  readOnly
-                  onFocus={(e) => e.currentTarget.removeAttribute('readonly')}
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="usuario@dominio.com"
-                  className="w-full rounded-xl border border-slate-700 bg-slate-950/80 pl-10 pr-4 py-2.5 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-400 transition-all"
-                />
+                </div>
               </div>
-            </div>
 
-            <div className="space-y-1.5">
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">
-                Contraseña
-              </label>
-              <div className="relative">
-                <Lock className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  name="solar_login_password"
-                  autoComplete="new-password"
-                  readOnly
-                  onFocus={(e) => e.currentTarget.removeAttribute('readonly')}
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full rounded-xl border border-slate-700 bg-slate-950/80 pl-10 pr-10 py-2.5 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-400 transition-all"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 p-1 cursor-pointer"
-                  tabIndex={-1}
-                >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between text-xs pt-1">
-              <span className="text-[11px] text-slate-400">Base de datos: PostgreSQL (`usuarios`)</span>
-              <span className="text-[11px] text-emerald-400 font-semibold flex items-center gap-1">
-                <ShieldCheck className="w-3.5 h-3.5" /> Token JWT
-              </span>
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-extrabold text-sm shadow-lg shadow-emerald-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Verificando en PostgreSQL...</span>
-                </>
-              ) : (
-                <>
-                  <span>Ingresar a la Plataforma</span>
-                  <ArrowRight className="w-4 h-4" />
-                </>
+              {/* Alerta de Error */}
+              {error && (
+                <div className="p-3.5 rounded-2xl bg-red-500/10 border border-red-500/30 text-xs text-red-400 flex items-start gap-2.5 animate-fadeIn">
+                  <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+                  <span>{error}</span>
+                </div>
               )}
-            </button>
-          </form>
-            </div>
 
-            <p className="text-center text-[11px] text-slate-600 mt-5">
-              © {new Date().getFullYear()} TICLINE EVOLUCIÓN · Autenticación PostgreSQL + JWT
-            </p>
+              {/* ==================== FORMULARIO DE LOGIN ==================== */}
+              <form onSubmit={handleLoginSubmit} autoComplete="off" className="space-y-4">
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">
+                    Correo Electrónico
+                  </label>
+                  <div className="relative">
+                    <Mail className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="email"
+                      name="solar_login_email"
+                      autoComplete="off"
+                      readOnly
+                      onFocus={(e) => e.currentTarget.removeAttribute('readonly')}
+                      required
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="usuario@dominio.com"
+                      className="w-full rounded-xl border border-slate-700 bg-slate-950/80 pl-10 pr-4 py-2.5 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-400 transition-all"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">
+                    Contraseña
+                  </label>
+                  <div className="relative">
+                    <Lock className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      name="solar_login_password"
+                      autoComplete="new-password"
+                      readOnly
+                      onFocus={(e) => e.currentTarget.removeAttribute('readonly')}
+                      required
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="w-full rounded-xl border border-slate-700 bg-slate-950/80 pl-10 pr-10 py-2.5 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-400 transition-all"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 p-1 cursor-pointer"
+                      tabIndex={-1}
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between text-xs pt-1">
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full py-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-extrabold text-sm shadow-lg shadow-emerald-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Verificando en PostgreSQL...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>Ingresar a la Plataforma</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </>
+                  )}
+                </button>
+              </form>
+            </div>
           </div>
         </div>
       </div>

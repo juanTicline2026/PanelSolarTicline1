@@ -284,6 +284,9 @@ export async function deleteUsuario(req: AuthenticatedRequest, res: Response) {
   }
 
   try {
+    await pool.query('DELETE FROM public.sesiones_jwt WHERE usuario_id = $1', [id]);
+    await pool.query('UPDATE public.cotizaciones SET usuario_id = NULL WHERE usuario_id = $1', [id]);
+
     const result = await pool.query(
       'DELETE FROM public.usuarios WHERE id = $1 RETURNING id, nombre, email',
       [id]

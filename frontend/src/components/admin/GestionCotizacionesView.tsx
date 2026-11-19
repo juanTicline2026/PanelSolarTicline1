@@ -79,7 +79,7 @@ export const GestionCotizacionesView: React.FC<Props> = ({
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  // Modales del CRUD
+  // Modales de acciones
   const [modalVer, setModalVer] = useState<CotizacionItem | null>(null);
   const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
   const [loadingPdfPreview, setLoadingPdfPreview] = useState(false);
@@ -177,8 +177,8 @@ export const GestionCotizacionesView: React.FC<Props> = ({
       projectCode: raw.projectCode || `COT-${cot.id}`,
       date: cot.fechaCreacion
         ? new Intl.DateTimeFormat('es-CO', { month: 'long', day: '2-digit', year: 'numeric' }).format(
-            new Date(cot.fechaCreacion)
-          )
+          new Date(cot.fechaCreacion)
+        )
         : raw.date,
       clientName: cot.cliente || raw.clientName || 'Cliente Solar',
       projectName: cot.proyecto || raw.projectName || 'Proyecto Solar',
@@ -447,14 +447,13 @@ export const GestionCotizacionesView: React.FC<Props> = ({
         </div>
       )}
 
-      {/* Header del Módulo CRUD */}
+      {/* Header del Módulo */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-200 dark:border-slate-800">
         <div>
           <div className="flex items-center gap-2">
             <span className="px-2.5 py-1 rounded-lg text-[10px] font-extrabold uppercase tracking-wider bg-teal-500/10 text-teal-600 dark:text-teal-400 border border-teal-500/20">
               Módulo de Propuestas Solares
             </span>
-            <span className="text-xs text-slate-400">• CRUD Completo en PostgreSQL</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white mt-1">
             Gestionar Cotizaciones
@@ -565,7 +564,7 @@ export const GestionCotizacionesView: React.FC<Props> = ({
         </div>
       </div>
 
-      {/* Tabla / Lista CRUD de Cotizaciones */}
+      {/* Tabla / Lista de Cotizaciones */}
       <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20 gap-3 text-slate-400">
@@ -589,16 +588,16 @@ export const GestionCotizacionesView: React.FC<Props> = ({
             <table className="w-full text-left text-xs border-collapse">
               <thead>
                 <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-950/60 text-slate-400 font-bold uppercase tracking-wider text-[10px]">
-                  <th className="py-3.5 px-4">ID</th>
-                  <th className="py-3.5 px-4">Cliente & Proyecto</th>
-                  <th className="py-3.5 px-4">Ubicación</th>
-                  <th className="py-3.5 px-4">Capacidad</th>
-                  <th className="py-3.5 px-4">Inversión (COP)</th>
-                  <th className="py-3.5 px-4">Ahorro Mensual</th>
-                  <th className="py-3.5 px-4">Creado Por</th>
-                  <th className="py-3.5 px-4">Fecha</th>
-                  <th className="py-3.5 px-4">Fecha Actualización</th>
-                  <th className="py-3.5 px-4 text-right">Acciones (CRUD)</th>
+                  <th className="py-3 px-2.5 whitespace-nowrap">ID</th>
+                  <th className="py-3 px-2.5">Cliente & Proyecto</th>
+                  <th className="py-3 px-2.5">Ubicación</th>
+                  <th className="py-3 px-2.5 whitespace-nowrap">Capacidad</th>
+                  <th className="py-3 px-2.5 whitespace-nowrap">Inversión (COP)</th>
+                  <th className="py-3 px-2.5 whitespace-nowrap">Ahorro Mensual</th>
+                  <th className="py-3 px-2.5">Creado Por</th>
+                  <th className="py-3 px-2.5 whitespace-nowrap">Fecha</th>
+                  <th className="py-3 px-2.5 whitespace-nowrap">Fecha Actualización</th>
+                  <th className="py-3 px-2.5 text-right whitespace-nowrap">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium">
@@ -607,30 +606,30 @@ export const GestionCotizacionesView: React.FC<Props> = ({
                     key={c.id}
                     className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors group"
                   >
-                    <td className="py-3.5 px-4 font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                    <td className="py-3 px-2.5 font-mono font-bold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
                       #{c.id}
                     </td>
 
-                    <td className="py-3.5 px-4">
-                      <div className="font-bold text-slate-900 dark:text-slate-100 text-sm">
+                    <td className="py-3 px-2.5">
+                      <div className="font-bold text-slate-900 dark:text-slate-100 text-sm break-words">
                         {c.cliente}
                       </div>
-                      <div className="text-[11px] text-slate-400 truncate max-w-[200px]">
+                      <div className="text-[11px] text-slate-400 break-words">
                         {c.proyecto || 'Proyecto Solar'}
                       </div>
                     </td>
 
-                    <td className="py-3.5 px-4">
+                    <td className="py-3 px-2.5">
                       <div className="flex items-center gap-1 text-slate-700 dark:text-slate-300">
                         <MapPin className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
-                        <span>{c.ciudad || 'No especificada'}</span>
+                        <span className="break-words">{c.ciudad || 'No especificada'}</span>
                       </div>
-                      <div className="text-[10px] text-slate-400 pl-4">{c.departamento}</div>
+                      <div className="text-[10px] text-slate-400 pl-4 break-words">{c.departamento}</div>
                     </td>
 
-                    <td className="py-3.5 px-4">
-                      <div className="flex items-center gap-1 font-bold text-slate-900 dark:text-slate-100">
-                        <Zap className="w-3.5 h-3.5 text-amber-500" />
+                    <td className="py-3 px-2.5">
+                      <div className="flex items-center gap-1 font-bold text-slate-900 dark:text-slate-100 whitespace-nowrap">
+                        <Zap className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
                         <span>{nf(c.kwp, 2)} kWp</span>
                       </div>
                       <div className="text-[10px] text-slate-400 pl-4">
@@ -638,11 +637,11 @@ export const GestionCotizacionesView: React.FC<Props> = ({
                       </div>
                     </td>
 
-                    <td className="py-3.5 px-4 font-bold text-slate-900 dark:text-slate-100">
+                    <td className="py-3 px-2.5 font-bold text-slate-900 dark:text-slate-100">
                       {cop(c.inversionCop)}
                     </td>
 
-                    <td className="py-3.5 px-4">
+                    <td className="py-3 px-2.5">
                       <div className="font-bold text-emerald-600 dark:text-emerald-400">
                         {cop(c.ahorroMensualCop)}
                       </div>
@@ -653,27 +652,27 @@ export const GestionCotizacionesView: React.FC<Props> = ({
                       ) : null}
                     </td>
 
-                    <td className="py-3.5 px-4">
+                    <td className="py-3 px-2.5">
                       <div className="flex items-center gap-1 text-slate-700 dark:text-slate-300 font-semibold">
-                        <User className="w-3.5 h-3.5 text-emerald-500" />
-                        <span>{c.usuarioNombre || 'Sistema'}</span>
+                        <User className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" />
+                        <span className="break-words">{c.usuarioNombre || 'Sistema'}</span>
                       </div>
-                      <div className="text-[10px] text-slate-400 pl-4 truncate max-w-[140px]">
+                      <div className="text-[10px] text-slate-400 pl-4 break-all">
                         {c.creadoPor || ''}
                       </div>
                     </td>
 
-                    <td className="py-3.5 px-4 text-slate-500 text-[11px] whitespace-nowrap">
+                    <td className="py-3 px-2.5 text-slate-500 text-[11px] whitespace-nowrap">
                       {c.fechaCreacion
                         ? new Date(c.fechaCreacion).toLocaleDateString('es-CO', {
-                            year: 'numeric',
-                            month: 'short',
-                            day: 'numeric',
-                          })
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric',
+                        })
                         : 'Reciente'}
                     </td>
 
-                    <td className="py-3.5 px-4 text-[11px] whitespace-nowrap">
+                    <td className="py-3 px-2.5 text-[11px] whitespace-nowrap">
                       {(() => {
                         const f = formatFechaHora(c.fechaActualizacion || c.fechaCreacion);
                         return f ? (
@@ -687,15 +686,15 @@ export const GestionCotizacionesView: React.FC<Props> = ({
                       })()}
                     </td>
 
-                    {/* Acciones CRUD */}
-                    <td className="py-3.5 px-4 text-right">
-                      <div className="flex items-center justify-end gap-1.5">
+                    {/* Acciones */}
+                    <td className="py-3 px-2.5 text-right whitespace-nowrap">
+                      <div className="flex items-center justify-end gap-1">
                         {/* R: Read Detail */}
                         <button
                           type="button"
                           onClick={() => setModalVer(c)}
                           title="Ver detalle completo"
-                          className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:text-emerald-500 hover:border-emerald-500/40 hover:bg-emerald-500/10 transition-colors"
+                          className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:text-emerald-500 hover:border-emerald-500/40 hover:bg-emerald-500/10 transition-colors cursor-pointer"
                         >
                           <Eye className="w-3.5 h-3.5" />
                         </button>
@@ -706,7 +705,7 @@ export const GestionCotizacionesView: React.FC<Props> = ({
                             type="button"
                             onClick={() => handleOpenEditar(c)}
                             title="Editar cotización"
-                            className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:text-teal-500 hover:border-teal-500/40 hover:bg-teal-500/10 transition-colors"
+                            className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:text-teal-500 hover:border-teal-500/40 hover:bg-teal-500/10 transition-colors cursor-pointer"
                           >
                             <Edit className="w-3.5 h-3.5" />
                           </button>
@@ -718,7 +717,7 @@ export const GestionCotizacionesView: React.FC<Props> = ({
                             type="button"
                             onClick={() => setModalEliminar(c)}
                             title="Eliminar cotización"
-                            className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-800 text-slate-500 hover:text-red-500 hover:border-red-500/40 hover:bg-red-500/10 transition-colors"
+                            className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-800 text-slate-500 hover:text-red-500 hover:border-red-500/40 hover:bg-red-500/10 transition-colors cursor-pointer"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>

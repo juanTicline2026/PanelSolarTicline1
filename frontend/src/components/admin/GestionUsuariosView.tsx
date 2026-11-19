@@ -48,7 +48,7 @@ export const GestionUsuariosView: React.FC<Props> = ({ currentUser }) => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  // Modales del CRUD
+  // Modales de acciones
   const [modalVer, setModalVer] = useState<UsuarioItem | null>(null);
   const [modalEliminar, setModalEliminar] = useState<UsuarioItem | null>(null);
   const [modalEditar, setModalEditar] = useState<UsuarioItem | null>(null);
@@ -63,6 +63,7 @@ export const GestionUsuariosView: React.FC<Props> = ({ currentUser }) => {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [guardando, setGuardando] = useState(false);
+  const [eliminandoId, setEliminandoId] = useState<number | null>(null);
 
   const canViewUsuarios = hasPermission(currentUser, 'usuarios:ver');
   const canCreateUsuarios = hasPermission(currentUser, 'usuarios:crear');
@@ -237,34 +238,37 @@ export const GestionUsuariosView: React.FC<Props> = ({ currentUser }) => {
   };
 
   // D: DELETE
-  const handleConfirmarEliminar = async () => {
-    if (!modalEliminar) return;
-
+  const handleEliminarUsuario = async (u: UsuarioItem) => {
+    setEliminandoId(u.id);
     setGuardando(true);
     setError(null);
     try {
       const token = getAuthToken();
-      const res = await fetch(`/api/usuarios/${modalEliminar.id}`, {
+      const res = await fetch(`/api/usuarios/${u.id}`, {
         method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
 
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         throw new Error(data.message || 'Error al eliminar el usuario');
       }
 
-      setSuccess(`Usuario #${modalEliminar.id} (${modalEliminar.nombre}) eliminado de PostgreSQL.`);
+      setSuccess(`Usuario #${u.id} (${u.nombre}) eliminado de PostgreSQL.`);
       setModalEliminar(null);
-      setUsuarios((prev) => prev.filter((u) => u.id !== modalEliminar.id));
+      setUsuarios((prev) => prev.filter((item) => item.id !== u.id));
+      cargarUsuarios();
     } catch (err: any) {
       setError(err.message || 'Error al eliminar el usuario');
     } finally {
+      setEliminandoId(null);
       setGuardando(false);
     }
+  };
+
+  const handleConfirmarEliminar = async () => {
+    if (!modalEliminar) return;
+    await handleEliminarUsuario(modalEliminar);
   };
 
   // Filtrado en vivo
@@ -327,20 +331,19 @@ export const GestionUsuariosView: React.FC<Props> = ({ currentUser }) => {
         </div>
       )}
 
-      {/* Header del Módulo CRUD */}
+      {/* Header del Módulo */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-200 dark:border-slate-800">
         <div>
           <div className="flex items-center gap-2">
             <span className="px-2.5 py-1 rounded-lg text-[10px] font-extrabold uppercase tracking-wider bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
               Módulo de Cuentas
             </span>
-            <span className="text-xs text-slate-400">• CRUD Completo en PostgreSQL</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white mt-1">
             Gestión de Usuarios
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-            Crea, consulta, edita y elimina usuarios registrados en la base de datos con encriptación scrypt.
+            Crea, consulta, edita y elimina usuarios registrados.
           </p>
         </div>
 
@@ -445,7 +448,7 @@ export const GestionUsuariosView: React.FC<Props> = ({ currentUser }) => {
         </div>
       </div>
 
-      {/* Tabla CRUD de Usuarios */}
+      {/* Tabla de Usuarios */}
       <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20 gap-3 text-slate-400">
@@ -469,14 +472,14 @@ export const GestionUsuariosView: React.FC<Props> = ({ currentUser }) => {
             <table className="w-full text-left text-xs border-collapse">
               <thead>
                 <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-950/60 text-slate-400 font-bold uppercase tracking-wider text-[10px]">
-                  <th className="py-3.5 px-4">ID</th>
-                  <th className="py-3.5 px-4">Usuario</th>
-                  <th className="py-3.5 px-4">Correo Electrónico</th>
-                  <th className="py-3.5 px-4">Rol</th>
-                  <th className="py-3.5 px-4">Permisos</th>
-                  <th className="py-3.5 px-4">Último Acceso</th>
-                  <th className="py-3.5 px-4">Fecha Actualización</th>
-                  <th className="py-3.5 px-4 text-right">Acciones (CRUD)</th>
+                  <th className="py-3.5 px-4 whitespace-nowrap">ID</th>
+                  <th className="py-3.5 px-4 min-w-[160px]">Usuario</th>
+                  <th className="py-3.5 px-4 min-w-[180px]">Correo Electrónico</th>
+                  <th className="py-3.5 px-4 whitespace-nowrap min-w-[160px]">Rol</th>
+                  <th className="py-3.5 px-4 whitespace-nowrap">Permisos</th>
+                  <th className="py-3.5 px-4 whitespace-nowrap">Último Acceso</th>
+                  <th className="py-3.5 px-4 whitespace-nowrap">Fecha Actualización</th>
+                  <th className="py-3.5 px-4 text-right whitespace-nowrap">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium">
@@ -516,15 +519,14 @@ export const GestionUsuariosView: React.FC<Props> = ({ currentUser }) => {
                         </div>
                       </td>
 
-                      <td className="py-3.5 px-4">
+                      <td className="py-3.5 px-4 whitespace-nowrap">
                         <span
-                          className={`text-[10px] font-bold px-2.5 py-1 rounded-lg ${
-                            u.rol === 'Administrador'
-                              ? 'bg-purple-500/15 text-purple-600 dark:text-purple-400 border border-purple-500/20'
-                              : u.rol === 'Ingeniero de Proyectos'
+                          className={`inline-flex items-center justify-center whitespace-nowrap text-[10px] font-bold px-2.5 py-1 rounded-lg ${u.rol === 'Administrador'
+                            ? 'bg-purple-500/15 text-purple-600 dark:text-purple-400 border border-purple-500/20'
+                            : u.rol === 'Ingeniero de Proyectos'
                               ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
                               : 'bg-teal-500/15 text-teal-600 dark:text-teal-400 border border-teal-500/20'
-                          }`}
+                            }`}
                         >
                           {u.rol}
                         </span>
@@ -540,10 +542,10 @@ export const GestionUsuariosView: React.FC<Props> = ({ currentUser }) => {
                       <td className="py-3.5 px-4 text-slate-500 text-[11px] whitespace-nowrap">
                         {u.ultimoLogin
                           ? new Date(u.ultimoLogin).toLocaleDateString('es-CO', {
-                              year: 'numeric',
-                              month: 'short',
-                              day: 'numeric',
-                            })
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric',
+                          })
                           : 'Sin registro'}
                       </td>
 
@@ -561,7 +563,7 @@ export const GestionUsuariosView: React.FC<Props> = ({ currentUser }) => {
                         })()}
                       </td>
 
-                      {/* Acciones CRUD */}
+                      {/* Acciones */}
                       <td className="py-3.5 px-4 text-right">
                         <div className="flex items-center justify-end gap-1.5">
                           <button
@@ -586,12 +588,16 @@ export const GestionUsuariosView: React.FC<Props> = ({ currentUser }) => {
 
                               <button
                                 type="button"
-                                onClick={() => setModalEliminar(u)}
-                                disabled={isSelf}
+                                onClick={() => handleEliminarUsuario(u)}
+                                disabled={isSelf || eliminandoId === u.id}
                                 title={isSelf ? 'No puedes eliminar tu propio usuario' : 'Eliminar usuario'}
                                 className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-800 text-slate-500 hover:text-red-500 hover:border-red-500/40 hover:bg-red-500/10 transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
                               >
-                                <Trash2 className="w-3.5 h-3.5" />
+                                {eliminandoId === u.id ? (
+                                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                ) : (
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                )}
                               </button>
                             </>
                           )}
